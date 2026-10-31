@@ -41,6 +41,9 @@ defaults:
   check_description: true
   preferred_grad_year: 2027
   max_enrich: 80
+  locations:
+    mode: include
+    countries: [US]
   rate_limit_rps: 1.5
   timeout_s: 25
 

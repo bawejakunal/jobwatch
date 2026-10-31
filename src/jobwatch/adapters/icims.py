@@ -9,6 +9,7 @@ from bs4 import BeautifulSoup
 
 from jobwatch.adapters.base import AdapterError, NeedsBrowserError
 from jobwatch.http import request
+from jobwatch.locations import classify_text
 from jobwatch.models import Company, NormalizedJob
 from jobwatch.textutil import html_to_text
 
@@ -164,6 +165,7 @@ def parse_search_html(html: str, *, portal: str, company_id: str) -> tuple[list[
                 title=title,
                 url=urljoin(portal + "/", href),
                 location=location,
+                places=[classify_text(location)] if location else [],
                 fingerprint=title,
                 detail_ref=job_id,
             )

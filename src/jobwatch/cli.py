@@ -212,6 +212,11 @@ def scan(
         "--no-enrich",
         help="Skip description fetches and body matching (title-only).",
     ),
+    any_location: bool = typer.Option(
+        False,
+        "--any-location",
+        help="Disable the location filter (default is US-only).",
+    ),
     config: Optional[Path] = typer.Option(None, "--config"),
     db: Optional[Path] = typer.Option(None, "--db"),
     quiet: bool = typer.Option(False, "--quiet", help="Skip the table; still write JSON/CSV."),
@@ -222,7 +227,7 @@ def scan(
     db_path = find_db_path(str(db) if db else None, Path(cfg.path) if cfg.path else None)
     store = Store(db_path)
     enrich_flag: bool | None = True if check_description else (False if no_enrich else None)
-    settings = filter_settings(cfg, check_description=enrich_flag)
+    settings = filter_settings(cfg, check_description=enrich_flag, any_location=any_location)
     try:
         results = scan_companies(
             cfg,

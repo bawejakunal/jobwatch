@@ -7,6 +7,7 @@ import httpx
 
 from jobwatch.adapters.base import AdapterError
 from jobwatch.http import request
+from jobwatch.locations import JobLocation, classify_text, normalize_country
 from jobwatch.models import Company, NormalizedJob
 
 
@@ -83,7 +84,8 @@ def _map(company: Company, item: dict[str, Any]) -> NormalizedJob | None:
         job_id = url.rstrip("/").split("/")[-1]
     if not job_id or not title or not url:
         return None
-    location = _ashby_location(item)
+    places = _ashby_places(item)
+    location = ", ".join(p.text for p in places) if places else None
     return NormalizedJob(
         company_id=company.id,
         source="ashby",
@@ -91,6 +93,7 @@ def _map(company: Company, item: dict[str, Any]) -> NormalizedJob | None:
         title=title,
         url=url,
         location=location,
+        places=places,
         department=item.get("department") or item.get("team"),
         workplace=item.get("workplaceType"),
         posted_at=item.get("publishedAt"),
@@ -99,15 +102,35 @@ def _map(company: Company, item: dict[str, Any]) -> NormalizedJob | None:
     )
 
 
-def _ashby_location(item: dict[str, Any]) -> str | None:
-    parts: list[str] = []
-    if item.get("location"):
-        parts.append(str(item["location"]))
+def _ashby_places(item: dict[str, Any]) -> list[JobLocation]:
+    places: list[JobLocation] = []
+    seen: set[str] = set()
+    primary = item.get("location")
+    if primary:
+        places.append(_ashby_place(str(primary), item.get("address"), item.get("isRemote")))
+        seen.add(str(primary))
     for extra in item.get("secondaryLocations") or []:
-        if isinstance(extra, dict) and extra.get("location"):
-            loc = str(extra["location"])
-            if loc not in parts:
-                parts.append(loc)
-        elif isinstance(extra, str) and extra not in parts:
-            parts.append(extra)
-    return ", ".join(parts) if parts else None
+        if isinstance(extra, dict):
+            text = extra.get("location")
+            if not text or str(text) in seen:
+                continue
+            seen.add(str(text))
+            places.append(_ashby_place(str(text), extra.get("address"), False))
+        elif isinstance(extra, str) and extra not in seen:
+            seen.add(extra)
+            places.append(classify_text(extra))
+    return places
+
+
+def _ashby_place(text: str, address: object, is_remote: object) -> JobLocation:
+    country = None
+    if isinstance(address, dict):
+        postal = address.get("postalAddress") if isinstance(address.get("postalAddress"), dict) else address
+        if isinstance(postal, dict):
+            country = normalize_country(postal.get("addressCountry"))
+    place = classify_text(text, structured_country=country)
+    if is_remote is True:
+        place.remote = True
+        if place.country is None:
+            place.ambiguous = True
+    return place

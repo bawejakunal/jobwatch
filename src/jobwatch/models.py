@@ -24,6 +24,8 @@ class NormalizedJob:
     title: str
     url: str
     location: str | None = None
+    places: list = field(default_factory=list)
+    location_ambiguous: bool = False
     department: str | None = None
     workplace: str | None = None
     posted_at: str | None = None
@@ -52,6 +54,7 @@ class Company:
     enabled: bool = True
     include_title: list[str] | None = None
     exclude_title: list[str] | None = None
+    locations: object | None = None
     timeout_s: float | None = None
     max_pages: int | None = None
     extra: dict[str, Any] = field(default_factory=dict)
@@ -78,6 +81,7 @@ class FilterSettings:
     include_description: list[str] = field(default_factory=list)
     preferred_grad_year: int = 2027
     max_enrich: int = 80
+    locations: object | None = None
 
 
 @dataclass(slots=True)
@@ -89,6 +93,7 @@ class Defaults:
     include_description: list[str] = field(default_factory=list)
     preferred_grad_year: int = 2027
     max_enrich: int = 80
+    locations: object | None = None
     rate_limit_rps: float = 1.5
     timeout_s: float = 25.0
     max_pages: int | None = None

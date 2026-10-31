@@ -7,6 +7,7 @@ import httpx
 
 from jobwatch.adapters.base import AdapterError
 from jobwatch.http import request
+from jobwatch.locations import classify_text, normalize_country
 from jobwatch.models import Company, NormalizedJob
 from jobwatch.textutil import html_to_text
 
@@ -133,6 +134,19 @@ def _map(company: Company, item: dict[str, Any], board: str) -> NormalizedJob | 
     url = f"https://jobs.smartrecruiters.com/{identifier}/{job_id}"
     loc = item.get("location") or {}
     location = _format_location(loc) if isinstance(loc, dict) else None
+    places = []
+    if isinstance(loc, dict):
+        country = normalize_country(loc.get("country"))
+        remote = loc.get("remote") is True
+        text = location or (country or "Remote")
+        place = classify_text(text, structured_country=country)
+        if remote:
+            place.remote = True
+            if place.country is None:
+                place.ambiguous = True
+        places = [place]
+    elif location:
+        places = [classify_text(location)]
     dept = item.get("department") or {}
     function = item.get("function") or {}
     department = None
@@ -147,6 +161,7 @@ def _map(company: Company, item: dict[str, Any], board: str) -> NormalizedJob | 
         title=title,
         url=url,
         location=location,
+        places=places,
         department=department,
         posted_at=item.get("releasedDate"),
         fingerprint=item.get("releasedDate") or str(job_id),

@@ -7,6 +7,7 @@ from typing import Any
 import yaml
 from dotenv import load_dotenv
 
+from jobwatch.locations import LocationSettings, parse_location_settings
 from jobwatch.models import AppConfig, Company, Defaults, FilterSettings, Scope
 
 DEFAULT_INCLUDE = [
@@ -135,6 +136,7 @@ def load_config(path: Path) -> AppConfig:
         include_description=list(defaults_raw.get("include_description") or DEFAULT_DESCRIPTION_INCLUDE),
         preferred_grad_year=int(defaults_raw.get("preferred_grad_year") or 2027),
         max_enrich=int(defaults_raw.get("max_enrich") or 80),
+        locations=parse_location_settings(defaults_raw.get("locations")),
         rate_limit_rps=float(defaults_raw.get("rate_limit_rps") or 1.5),
         timeout_s=float(defaults_raw.get("timeout_s") or 25.0),
         max_pages=defaults_raw.get("max_pages"),
@@ -143,7 +145,17 @@ def load_config(path: Path) -> AppConfig:
     return AppConfig(defaults=defaults, companies=companies, path=str(path))
 
 
-def filter_settings(config: AppConfig, *, check_description: bool | None = None) -> FilterSettings:
+def filter_settings(
+    config: AppConfig,
+    *,
+    check_description: bool | None = None,
+    any_location: bool = False,
+) -> FilterSettings:
+    locations = config.defaults.locations
+    if not isinstance(locations, LocationSettings):
+        locations = parse_location_settings(locations)
+    if any_location:
+        locations = LocationSettings(enabled=False, countries=list(locations.countries), mode=locations.mode)
     return FilterSettings(
         include_title=config.defaults.include_title,
         exclude_title=config.defaults.exclude_title,
@@ -154,6 +166,7 @@ def filter_settings(config: AppConfig, *, check_description: bool | None = None)
         include_description=config.defaults.include_description or list(DEFAULT_DESCRIPTION_INCLUDE),
         preferred_grad_year=config.defaults.preferred_grad_year,
         max_enrich=config.defaults.max_enrich,
+        locations=locations,
     )
 
 
@@ -177,6 +190,7 @@ def _company(item: dict[str, Any], defaults: Defaults) -> Company:
         enabled=bool(item.get("enabled", True)),
         include_title=item.get("include_title"),
         exclude_title=item.get("exclude_title"),
+        locations=parse_location_settings(item["locations"]) if "locations" in item else None,
         timeout_s=item.get("timeout_s") or defaults.timeout_s,
         max_pages=item.get("max_pages", defaults.max_pages),
         extra={k: v for k, v in item.items() if k not in _KNOWN},
@@ -201,7 +215,16 @@ _KNOWN = {
     "exclude_title",
     "timeout_s",
     "max_pages",
+    "locations",
 }
+
+
+def _locations_to_dict(raw: object | None) -> dict[str, object]:
+    settings = raw if isinstance(raw, LocationSettings) else parse_location_settings(raw)
+    return {
+        "mode": settings.mode,
+        "countries": list(settings.countries),
+    }
 
 
 def dump_config(config: AppConfig, path: Path) -> None:
@@ -214,6 +237,7 @@ def dump_config(config: AppConfig, path: Path) -> None:
             "description_exclude": config.defaults.description_exclude,
             "preferred_grad_year": config.defaults.preferred_grad_year,
             "max_enrich": config.defaults.max_enrich,
+            "locations": _locations_to_dict(config.defaults.locations),
             "rate_limit_rps": config.defaults.rate_limit_rps,
             "timeout_s": config.defaults.timeout_s,
             "max_pages": config.defaults.max_pages,
@@ -243,6 +267,7 @@ def _company_to_dict(company: Company) -> dict[str, Any]:
         "enabled",
         "include_title",
         "exclude_title",
+        "locations",
         "timeout_s",
         "max_pages",
     ):
@@ -252,6 +277,9 @@ def _company_to_dict(company: Company) -> dict[str, Any]:
         if key == "enabled" and value is True:
             continue
         if key == "scope" and value == "new_grad":
+            continue
+        if key == "locations" and value is not None:
+            data[key] = _locations_to_dict(value)
             continue
         data[key] = value
     return data

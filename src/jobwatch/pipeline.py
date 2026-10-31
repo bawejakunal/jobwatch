@@ -4,6 +4,7 @@ from jobwatch.adapters import ADAPTERS, AdapterError, NeedsBrowserError, apply_i
 from jobwatch.detect import detect_from_url
 from jobwatch.filter import apply_filter, needs_description
 from jobwatch.http import RateLimiter, build_client
+from jobwatch.locations import LocationSettings, apply_location_filter, parse_location_settings
 from jobwatch.models import AppConfig, Company, CompanyResult, FilterSettings, NormalizedJob
 from jobwatch.output import err_console
 from jobwatch.store import Store
@@ -105,6 +106,9 @@ def _scan_one(
                 )
         if apply_new_grad_filter:
             jobs = apply_filter(jobs, company, settings)
+        loc_settings = _location_settings(company, settings)
+        if loc_settings.enabled:
+            jobs = apply_location_filter(jobs, loc_settings)
         result.jobs = jobs
         result.new_jobs = store.upsert_jobs(
             company.id,
@@ -183,6 +187,19 @@ def _install_limiter(client, limiter: RateLimiter) -> None:
         return original(method, url, **kwargs)
 
     client.request = wrapped  # type: ignore[method-assign]
+
+
+def _location_settings(company: Company, settings: FilterSettings) -> LocationSettings:
+    if company.locations is not None:
+        raw = company.locations
+        return raw if isinstance(raw, LocationSettings) else parse_location_settings(raw)
+    override = company.extra.get("locations") if company.extra else None
+    if override is not None:
+        return parse_location_settings(override)
+    raw = settings.locations
+    if isinstance(raw, LocationSettings):
+        return raw
+    return parse_location_settings(raw)
 
 
 def known_ats() -> list[str]:

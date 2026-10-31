@@ -38,6 +38,7 @@ jobwatch scan --all                    # every open match
 jobwatch scan --json
 jobwatch scan --company sierra --csv out.csv
 jobwatch scan --no-enrich              # title-only, skip detail fetches
+jobwatch scan --any-location           # skip the US-only location filter
 ```
 
 Detection without writing config:
@@ -51,7 +52,7 @@ jobwatch detect https://careers-fhcrc.icims.com/jobs/search?ss=1 --no-fetch
 
 1. Loads `companies.yaml` (cwd, `./.jobwatch/`, or `~/.config/jobwatch/`).
 2. For each enabled company, hits the matching adapter.
-3. Keeps new-grad / intern / 2027 matches. Titles first; if that is inconclusive, the job body (cached after the first fetch). Campus boards can set `scope: all`.
+3. Keeps new-grad / intern / 2027 matches. Titles first; if that is inconclusive, the job body (cached after the first fetch). Campus boards can set `scope: all`. Default location filter is **US-only** (any US office, US remote, or unspecified Remote). `--any-location` turns it off.
 4. Upserts SQLite (`first_seen`, `last_seen`, `closed_at`, cached `description`).
 5. Prints a table. **NEW** means first seen on this run. **2027** is flagged and sorted first. `--all` prints the full open set.
 

@@ -8,6 +8,7 @@ import httpx
 
 from jobwatch.adapters.base import AdapterError
 from jobwatch.http import request
+from jobwatch.locations import classify_text
 from jobwatch.models import Company, NormalizedJob
 from jobwatch.textutil import html_to_text
 
@@ -243,13 +244,21 @@ def _map(
     bullets = item.get("bulletFields") or []
     job_id = match.group(1) if match else (str(bullets[0]) if bullets else path)
     posted = item.get("postedOn")
+    loc_text = item.get("locationsText")
+    places = [classify_text(str(loc_text))] if loc_text else []
+    # Deep links often encode country: /job/US-CA-Santa-Clara/...
+    if path.startswith("/job/") and not (places and places[0].country):
+        code = path.split("/")[2].split("-")[0] if path.count("/") >= 2 else ""
+        if len(code) == 2 and code.isalpha():
+            places = [classify_text(str(loc_text or code), structured_country=code)]
     return NormalizedJob(
         company_id=company.id,
         source="workday",
         job_id=str(job_id),
         title=title,
         url=url,
-        location=item.get("locationsText"),
+        location=str(loc_text) if loc_text else None,
+        places=places,
         posted_at=posted,
         fingerprint=f"{title}|{posted or ''}|{path}",
         detail_ref=path,

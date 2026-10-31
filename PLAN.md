@@ -66,6 +66,7 @@ src/jobwatch/
   http.py                      # polite httpx client
   detect.py                    # URL then HTML sniff
   filter.py                    # include / exclude / description
+  locations.py                 # US / country filter + display rewrite
   store.py                     # SQLite
   output.py                    # rich / json / csv
   pipeline.py                  # scan orchestration
@@ -148,6 +149,9 @@ defaults:
   check_description: true          # on by default; cached; --no-enrich to skip
   preferred_grad_year: 2027        # flagged and sorted first; 2026 is opt-in
   max_enrich: 80                   # detail-page fetches per company per run
+  locations:
+    mode: include                  # include | exclude
+    countries: [US]                # keep if ANY place matches; default US-only
   description_exclude:
     - "5+ years"
     - "5 years of experience"
@@ -267,7 +271,7 @@ class Adapter(Protocol):
     ) -> list[NormalizedJob]: ...
 ```
 
-`NormalizedJob`: `company_id`, `source`, `job_id`, `title`, `url`, `location`, `department`, `workplace`, `posted_at`, `description`, `raw` (optional, not persisted in full).
+`NormalizedJob`: `company_id`, `source`, `job_id`, `title`, `url`, `location`, `places` (structured), `location_ambiguous`, `department`, `workplace`, `posted_at`, `description`, `raw` (optional, not persisted in full).
 
 Errors:
 
@@ -564,6 +568,17 @@ Matching: case-insensitive; short tokens (`lead`, `jr`, `vp`, `2027`) use word b
 
 Company-level `include_title` / `exclude_title` replace the default lists when set (not merged), so a campus board can say `include_title: ["*"]` via `scope: all` instead.
 
+### Location filter (default US-only)
+
+Applied after the new-grad filter. A posting is kept if **any** of its places matches `defaults.locations` (or a per-company `locations` override).
+
+- `mode: include` + `countries: [US]` is the default. `--any-location` disables it.
+- Structured country wins when the ATS sends it (Ashby `address.postalAddress.addressCountry`, Lever `country`, SmartRecruiters `location.country`, Workday `US-…` path / `locationsText`, Greenhouse location name / offices).
+- Text fallback: `United States`, `Remote - US`, US state names/abbreviations, common US cities, `US-WA-Seattle`.
+- Foreign-only (Singapore, London, Remote - EMEA, …) is dropped.
+- Bare `Remote` / worldwide with no country is **kept** and flagged `location_ambiguous`. The table shows `Remote (unspecified)`.
+- Multi-location roles display the matching places and mark the rest: `San Francisco, CA, New York, NY (+ Singapore)`.
+
 ---
 
 ## 9. SQLite schema
@@ -629,6 +644,7 @@ jobwatch scan [options]
 | `--no-filter` | Skip new-grad rules (debug / campus audit) |
 | `--check-description` | Force description enrichment on (already the default) |
 | `--no-enrich` | Title-only; skip detail fetches and body matching |
+| `--any-location` | Disable the location filter (default is US-only) |
 | `--config` `--db` | Paths |
 | `--quiet` / `-v` | Log noise |
 

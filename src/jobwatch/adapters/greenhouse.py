@@ -8,6 +8,7 @@ import httpx
 
 from jobwatch.adapters.base import AdapterError
 from jobwatch.http import request
+from jobwatch.locations import classify_text
 from jobwatch.models import Company, NormalizedJob
 from jobwatch.textutil import html_to_text
 
@@ -93,10 +94,22 @@ def _map(company: Company, item: dict[str, Any]) -> NormalizedJob | None:
         return None
     location = None
     loc = item.get("location")
+    loc_country = None
     if isinstance(loc, dict):
         location = loc.get("name")
+        loc_country = loc.get("country") or loc.get("country_id")
     elif isinstance(loc, str):
         location = loc
+    places = []
+    if location:
+        places = [classify_text(str(location), structured_country=str(loc_country) if loc_country else None)]
+    offices = item.get("offices") or []
+    for office in offices:
+        if not isinstance(office, dict):
+            continue
+        name = office.get("name") or office.get("location")
+        if name and str(name) != location:
+            places.append(classify_text(str(name)))
     department = None
     depts = item.get("departments") or []
     if depts and isinstance(depts[0], dict):
@@ -111,6 +124,7 @@ def _map(company: Company, item: dict[str, Any]) -> NormalizedJob | None:
         title=title,
         url=url,
         location=location,
+        places=places,
         department=department,
         posted_at=item.get("first_published") or item.get("updated_at"),
         description=description,

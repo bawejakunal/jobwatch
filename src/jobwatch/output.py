@@ -9,6 +9,13 @@ from rich.table import Table
 
 from jobwatch.models import CompanyResult, NormalizedJob
 
+
+def _location_cell(job: NormalizedJob) -> str:
+    text = job.location or ""
+    if job.location_ambiguous and text and "unspecified" not in text.lower():
+        return f"{text} [?]"
+    return text
+
 console = Console()
 err_console = Console(stderr=True)
 
@@ -32,7 +39,7 @@ def render_table(rows: list[tuple[NormalizedJob, bool]], *, title: str) -> None:
             "2027" if job.year_match else "",
             job.company_id,
             job.title,
-            job.location or "",
+            _location_cell(job),
             job.match_on or "",
             job.url,
         )
@@ -70,6 +77,7 @@ def write_json(path: Path | None, rows: list[tuple[NormalizedJob, bool]]) -> str
             "title": job.title,
             "url": job.url,
             "location": job.location,
+            "location_ambiguous": job.location_ambiguous,
             "department": job.department,
             "workplace": job.workplace,
             "posted_at": job.posted_at,
@@ -96,6 +104,7 @@ def write_csv(path: Path, rows: list[tuple[NormalizedJob, bool]]) -> None:
                 "title",
                 "url",
                 "location",
+                "location_ambiguous",
                 "department",
                 "workplace",
                 "posted_at",
@@ -114,6 +123,7 @@ def write_csv(path: Path, rows: list[tuple[NormalizedJob, bool]]) -> None:
                     "title": job.title,
                     "url": job.url,
                     "location": job.location or "",
+                    "location_ambiguous": "yes" if job.location_ambiguous else "no",
                     "department": job.department or "",
                     "workplace": job.workplace or "",
                     "posted_at": job.posted_at or "",
