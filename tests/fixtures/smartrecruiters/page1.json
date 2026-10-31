@@ -1,0 +1,22 @@
+{
+  "offset": 1,
+  "limit": 1,
+  "totalFound": 2,
+  "content": [
+    {
+      "id": "744000158320222",
+      "name": "Staff Software Engineer",
+      "uuid": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+      "company": { "identifier": "acme", "name": "Acme" },
+      "releasedDate": "2026-10-20T15:14:43.941Z",
+      "location": {
+        "country": "US",
+        "region": "NY",
+        "city": "New York",
+        "remote": true
+      },
+      "department": { "id": 1, "label": "Engineering" },
+      "visibility": "PUBLIC"
+    }
+  ]
+}

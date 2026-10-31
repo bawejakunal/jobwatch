@@ -1,0 +1,14 @@
+{
+  "jobs": [
+    {
+      "absolute_url": "https://job-boards.greenhouse.io/acme/jobs/1001",
+      "location": { "name": "Remote - US" },
+      "id": 1001,
+      "title": "Software Engineer, New Grad",
+      "content": "We want new graduates. 0-2 years of experience.",
+      "departments": [{ "id": 1, "name": "Engineering" }],
+      "offices": [{ "name": "Remote" }]
+    }
+  ],
+  "meta": { "total": 1 }
+}

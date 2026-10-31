@@ -1,0 +1,25 @@
+{
+  "total": 0,
+  "jobPostings": [
+    {
+      "title": "New Grad Software Engineer",
+      "externalPath": "/job/US-CA-Santa-Clara/Software-Engineer_0020",
+      "locationsText": "US, CA, Santa Clara",
+      "postedOn": "Posted Today",
+      "bulletFields": [
+        "JR0020"
+      ]
+    },
+    {
+      "title": "Intern, Systems",
+      "externalPath": "/job/US-CA-Santa-Clara/Software-Engineer_0021",
+      "locationsText": "US, CA, Santa Clara",
+      "postedOn": "Posted Today",
+      "bulletFields": [
+        "JR0021"
+      ]
+    }
+  ],
+  "facets": [],
+  "userAuthenticated": false
+}

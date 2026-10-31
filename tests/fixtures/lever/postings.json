@@ -1,0 +1,30 @@
+[
+  {
+    "id": "6ed76ce8-4156-4b60-b120-403538bd66cd",
+    "text": "University Graduate, Software Engineer",
+    "hostedUrl": "https://jobs.lever.co/acme/6ed76ce8-4156-4b60-b120-403538bd66cd",
+    "applyUrl": "https://jobs.lever.co/acme/6ed76ce8-4156-4b60-b120-403538bd66cd/apply",
+    "categories": {
+      "commitment": "Full-time",
+      "location": "Singapore, Singapore",
+      "team": "Engineering",
+      "allLocations": ["Singapore, Singapore"]
+    },
+    "createdAt": 1700000000000,
+    "workplaceType": "hybrid",
+    "descriptionPlain": "Build software as a new graduate."
+  },
+  {
+    "id": "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+    "text": "Director of Engineering",
+    "hostedUrl": "https://jobs.lever.co/acme/aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+    "applyUrl": "https://jobs.lever.co/acme/aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee/apply",
+    "categories": {
+      "location": "NYC",
+      "team": "Engineering"
+    },
+    "createdAt": 1700000001000,
+    "workplaceType": "on-site",
+    "descriptionPlain": "Lead the org."
+  }
+]

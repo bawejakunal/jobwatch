@@ -1,0 +1,27 @@
+{
+  "jobs": [
+    {
+      "absolute_url": "https://job-boards.greenhouse.io/acme/jobs/1001",
+      "internal_job_id": 11,
+      "location": { "name": "Remote - US" },
+      "metadata": [],
+      "id": 1001,
+      "updated_at": "2026-10-20T20:14:41-04:00",
+      "requisition_id": "R-100",
+      "title": "Software Engineer, New Grad",
+      "company_name": "Acme",
+      "first_published": "2026-09-24T17:26:49-04:00",
+      "language": "en"
+    },
+    {
+      "absolute_url": "https://job-boards.greenhouse.io/acme/jobs/1002",
+      "internal_job_id": 12,
+      "location": { "name": "New York, NY" },
+      "id": 1002,
+      "updated_at": "2026-10-01T00:00:00-04:00",
+      "title": "Senior Staff Engineer",
+      "company_name": "Acme"
+    }
+  ],
+  "meta": { "total": 2 }
+}

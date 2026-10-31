@@ -1,0 +1,24 @@
+{
+  "offset": 0,
+  "limit": 1,
+  "totalFound": 2,
+  "content": [
+    {
+      "id": "744000158320111",
+      "name": "University Graduate Engineer",
+      "uuid": "a6f4c077-a7ac-4b8f-99d4-3756d1544f35",
+      "refNumber": "REF2042H",
+      "company": { "identifier": "acme", "name": "Acme" },
+      "releasedDate": "2026-10-28T15:14:43.941Z",
+      "location": {
+        "country": "US",
+        "region": "CA",
+        "city": "San Francisco",
+        "remote": false
+      },
+      "department": { "id": 1, "label": "Engineering" },
+      "function": { "id": "engineering", "label": "Engineering" },
+      "visibility": "PUBLIC"
+    }
+  ]
+}
