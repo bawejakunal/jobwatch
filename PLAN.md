@@ -17,7 +17,7 @@ The original sketch (detect ATS → hit public JSON → Playwright recipes → o
 3. **Normalize at the adapter boundary.** Filter, DB, and output never see Greenhouse `absolute_url` vs Lever `hostedUrl`. Every adapter emits `NormalizedJob`.
 4. **Playwright is a last resort, not the daily path.** Headless Chromium on a cron box is slow, brittle, and often blocked anyway. The HTTP adapters are the product. Recipes exist to *discover* a JSON endpoint and graduate it into an adapter.
 5. **LLM extraction must not invent jobs.** Use it only when a page rendered and we still have no structured links. Require a URL that already appeared in the page. Off by default, BYOK.
-6. **Title keywords miss most new-grad SWE roles.** Many are titled “Software Engineer” with “new graduate” only in the description. Phase 1 therefore supports `scope: all` on campus-only boards, and an optional description pass. The default remains “title must look junior,” because dumping every engineer role is not useful.
+6. **Title keywords miss most new-grad SWE roles.** Many are titled “Software Engineer” with “new graduate” only in the description. Description enrichment is **on by default**, with SQLite caching so unchanged postings are not refetched, a per-company `max_enrich` cap, and a stricter body-keyword list (bare “university” is title-only noise). `--no-enrich` reverts to title-only.
 7. **Workday is not “just POST and page.”** `limit` must be **20**. `total` is trustworthy on **page 0 only**. Offsets past **2000 wrap** to page 1. Tenant lives in the hostname *or* the path (`myworkdaysite.com`). Locale is a path prefix, not part of the site id.
 8. **iCIMS has no public JSON board API.** The official portal search API is authenticated. The reliable unauthenticated path is the iframe HTML search (`ss=1&in_iframe=1`, `pr=` pages). Many tenants still 403/405 or sit behind Cloudflare — those need the browser recipe, and we say so instead of pretending.
 
@@ -132,8 +132,6 @@ defaults:
     - campus
     - graduate program
     - graduate programme
-    - university
-    - "2026"
     - "2027"
   exclude_title:
     - senior
@@ -147,7 +145,9 @@ defaults:
     - manager
     - " lead"
   # Short tokens (lead, jr) are matched on word boundaries in code.
-  check_description: false
+  check_description: true          # on by default; cached; --no-enrich to skip
+  preferred_grad_year: 2027        # flagged and sorted first; 2026 is opt-in
+  max_enrich: 80                   # detail-page fetches per company per run
   description_exclude:
     - "5+ years"
     - "5 years of experience"
@@ -157,12 +157,27 @@ defaults:
   max_pages: null          # adapter-specific cap; Workday default 100 (2k jobs)
 
 companies:
-  # --- Greenhouse ---
+  # Default whitelist is Sierra + Harvey (both Ashby). Other ATS samples:
+  # companies.ats-examples.yaml
+  - id: sierra
+    name: Sierra
+    careers_url: https://sierra.ai/careers
+    ats: ashby
+    board: Sierra
+
+  - id: harvey
+    name: Harvey
+    careers_url: https://www.harvey.ai/careers
+    ats: ashby
+    board: harvey
+
+  # --- Greenhouse (see companies.ats-examples.yaml) ---
   - id: discord
     name: Discord
     careers_url: https://job-boards.greenhouse.io/discord
     ats: greenhouse
     board: discord
+    enabled: false
 
   # --- Lever (global). EU boards use jobs.eu.lever.co and region: eu ---
   - id: palantir
@@ -393,7 +408,7 @@ Mapped fields:
 | `posted_at` | `postedOn` (relative: “Posted Today”) |
 | extra | `bulletFields[0]` as requisition id |
 
-Detail descriptions (`GET /wday/cxs/{tenant}/{site}{externalPath}`) are N+1 and Phase 2 `--enrich` only.
+Detail descriptions (`GET /wday/cxs/{tenant}/{site}{externalPath}`) are fetched when `check_description` is on (the default), only for postings whose title did not already decide keep/drop, and only if SQLite has no cached body for the current fingerprint. Capped by `max_enrich`.
 
 ### 5.5 SmartRecruiters
 
@@ -416,7 +431,7 @@ Mapped fields:
 | `department` | `department.label` / `function.label` |
 | `posted_at` | `releasedDate` |
 
-Detail body is `GET /v1/companies/{company}/postings/{id}` (Phase 2 enrich).
+Detail body is `GET /v1/companies/{company}/postings/{id}` (`jobAd.sections.*.text`), used by description enrichment with the same cache + `max_enrich` cap.
 
 ### 5.6 iCIMS — best reliable approach, and its limits
 
@@ -459,7 +474,7 @@ Stop when:
 2. **Cloudflare / bot management** — challenge HTML, no job cards. Same error.
 3. **iCIMS Attract (newer “Career Sites”)** — React apps; the iframe search is a shell. Needs Playwright + a recipe, or a harvested XHR once we see one.
 4. **Custom domains** — careers page is `jobs.example.com` wrapping an iframe to `careers-example.icims.com`. URL detection misses it; HTML sniff looks for `icims.com` and `iCIMS_`.
-5. **No descriptions on the list.** Title filter only unless we N+1 each `/jobs/{id}/job?in_iframe=1` JSON-LD `JobPosting` (opt-in enrich).
+5. **No descriptions on the list.** Enrichment GETs `/jobs/{id}/job?in_iframe=1` and reads schema.org `JobPosting` JSON-LD. Cached by job id + title fingerprint; skipped when the title already decided keep/drop; capped by `max_enrich`.
 6. **Pager comments lie.** The HTML comments mention `rel="next"` even on the last page. Use visible `Page N of M` or an empty card list.
 7. **ToS.** iCIMS (and most ATS) dislike unauthenticated bulk scraping. jobwatch is a personal whitelist monitor with rate limits — keep the list short and the interval daily.
 
@@ -536,12 +551,16 @@ Rules:
 Order:
 
 1. If `company.scope == all` → keep.
-2. Title **exclude** hits, unless a **strong include** also hits (`new grad`, `intern`, `university grad`, `early career`, …). “Staff Software Engineer, University Graduate” stays. “Senior Software Engineer” goes.
-3. Title **include** hit → keep.
-4. Else drop (default is deny).
-5. Optional description pass: drop if experience-years look senior (`5+ years`, `7+ years`) and no junior counter-signal (`0-2 years`, `new grad`).
+2. Title **exclude** hits, unless a **strong include** also hits (`new grad`, `intern`, `university grad`, `early career`, preferred year, …). “Staff Software Engineer, University Graduate” stays. “Senior Software Engineer” goes.
+3. Title **include** hit → keep (then drop if the description looks senior: `5+ years` / `7+ years` with no `0-2 years` / `new grad` counter-signal).
+4. Else, if `check_description` (default on) and we have a body: keep when the **description include** list, preferred year, or `0-1`/`0-2` years hits, unless the body looks senior.
+5. Else drop.
 
-Matching: case-insensitive; short tokens (`lead`, `jr`, `vp`) use word boundaries so “Leadership Development Program” is not excluded for `lead`.
+**2027:** `preferred_grad_year` defaults to 2027. Matches are flagged (`year_match`) and sorted first in the table. `2026` is not in the default include list; add it under `include_title` if you still want last year's cycle.
+
+Internships stay in the default include list.
+
+Matching: case-insensitive; short tokens (`lead`, `jr`, `vp`, `2027`) use word boundaries so “Leadership Development Program” is not excluded for `lead`, and “International” is not an intern.
 
 Company-level `include_title` / `exclude_title` replace the default lists when set (not merged), so a campus board can say `include_title: ["*"]` via `scope: all` instead.
 
@@ -563,6 +582,8 @@ CREATE TABLE jobs (
   first_seen  TEXT NOT NULL,   -- UTC ISO
   last_seen   TEXT NOT NULL,
   closed_at   TEXT,
+  description TEXT,            -- cached job body for enrichment
+  fingerprint TEXT,            -- posted_at / title; mismatch forces refetch
   PRIMARY KEY (company_id, source, job_id)
 );
 
@@ -606,7 +627,8 @@ jobwatch scan [options]
 | `--json` / `--csv PATH` | Machine output (still prints the table unless `--quiet`) |
 | `--company ID` | Repeatable; subset |
 | `--no-filter` | Skip new-grad rules (debug / campus audit) |
-| `--check-description` | Force description heuristics this run |
+| `--check-description` | Force description enrichment on (already the default) |
+| `--no-enrich` | Title-only; skip detail fetches and body matching |
 | `--config` `--db` | Paths |
 | `--quiet` / `-v` | Log noise |
 
@@ -731,11 +753,11 @@ Phase 2 should add Workable, Recruitee, Breezy, BambooHR, Rippling, Personio, Te
 
 ---
 
-## 16. Open questions
+## 16. Open questions (answered)
 
-1. **Which companies first?** The example file has one live board per ATS so `add`/`scan` can be tried immediately. A real whitelist should be *your* target list (20–40 is a healthy daily run).
-2. **Internships vs full-time new grad?** Defaults include `intern`. Easy to drop from `include_title`.
-3. **Grad year window?** Defaults include `2026` and `2027`. Update each season.
-4. **Slack/email now or Phase 2?** Hooks are reserved in `.env.example` only.
-5. **Workday boards over 2,000 roles** — accept the cap + warning, or implement facet split next?
-6. **Description fetch on iCIMS/Workday** — slower, better recall for untitled-as-senior new-grad roles. Off until `--enrich`.
+1. **Whitelist** — Sierra + Harvey only for now. Full list later.
+2. **Internships** — kept in the default include list.
+3. **Grad year** — 2027 is the default signal and sort key. 2026 is opt-in via `include_title`.
+4. **Slack/email** — still unwired (Phase 2).
+5. **Workday >2000** — still a warning + cap; facet split remains Phase 2.
+6. **Descriptions** — on by default, cached, rate-limited, `max_enrich` cap. `--no-enrich` for title-only.

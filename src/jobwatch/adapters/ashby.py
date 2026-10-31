@@ -83,15 +83,31 @@ def _map(company: Company, item: dict[str, Any]) -> NormalizedJob | None:
         job_id = url.rstrip("/").split("/")[-1]
     if not job_id or not title or not url:
         return None
+    location = _ashby_location(item)
     return NormalizedJob(
         company_id=company.id,
         source="ashby",
         job_id=str(job_id),
         title=title,
         url=url,
-        location=item.get("location"),
+        location=location,
         department=item.get("department") or item.get("team"),
         workplace=item.get("workplaceType"),
         posted_at=item.get("publishedAt"),
         description=item.get("descriptionPlain"),
+        fingerprint=item.get("publishedAt") or str(job_id),
     )
+
+
+def _ashby_location(item: dict[str, Any]) -> str | None:
+    parts: list[str] = []
+    if item.get("location"):
+        parts.append(str(item["location"]))
+    for extra in item.get("secondaryLocations") or []:
+        if isinstance(extra, dict) and extra.get("location"):
+            loc = str(extra["location"])
+            if loc not in parts:
+                parts.append(loc)
+        elif isinstance(extra, str) and extra not in parts:
+            parts.append(extra)
+    return ", ".join(parts) if parts else None

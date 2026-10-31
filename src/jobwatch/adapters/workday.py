@@ -9,6 +9,7 @@ import httpx
 from jobwatch.adapters.base import AdapterError
 from jobwatch.http import request
 from jobwatch.models import Company, NormalizedJob
+from jobwatch.textutil import html_to_text
 
 PAGE_SIZE = 20
 DEFAULT_MAX_PAGES = 100
@@ -112,7 +113,6 @@ class WorkdayAdapter:
         *,
         include_content: bool = False,
     ) -> list[NormalizedJob]:
-        del include_content
         ident = _identity(company, self)
         host = ident["host"]
         tenant = ident["tenant"]
@@ -172,7 +172,35 @@ class WorkdayAdapter:
 
         if warning_cap:
             company.extra["workday_truncated"] = True
+        if include_content:
+            company.extra["_workday_ident"] = ident
         return out
+
+    def enrich_one(self, company: Company, client: httpx.Client, job: NormalizedJob) -> str | None:
+        ident = company.extra.get("_workday_ident") or _identity(company, self)
+        path = job.detail_ref
+        if not path:
+            return None
+        if not path.startswith("/"):
+            path = "/" + path
+        api = f"https://{ident['host']}/wday/cxs/{ident['tenant']}/{ident['site']}{path}"
+        response = request(
+            client,
+            "GET",
+            api,
+            headers={"Accept": "application/json", "Accept-Language": "en-US"},
+        )
+        if response.status_code >= 400:
+            return None
+        try:
+            payload = response.json()
+        except ValueError:
+            return None
+        info = payload.get("jobPostingInfo") or payload
+        html = None
+        if isinstance(info, dict):
+            html = info.get("jobDescription") or info.get("description")
+        return html_to_text(html) if isinstance(html, str) else None
 
 
 def _identity(company: Company, adapter: WorkdayAdapter) -> dict[str, str]:
@@ -214,6 +242,7 @@ def _map(
     match = JOB_ID_RE.search(path)
     bullets = item.get("bulletFields") or []
     job_id = match.group(1) if match else (str(bullets[0]) if bullets else path)
+    posted = item.get("postedOn")
     return NormalizedJob(
         company_id=company.id,
         source="workday",
@@ -221,5 +250,7 @@ def _map(
         title=title,
         url=url,
         location=item.get("locationsText"),
-        posted_at=item.get("postedOn"),
+        posted_at=posted,
+        fingerprint=f"{title}|{posted or ''}|{path}",
+        detail_ref=path,
     )

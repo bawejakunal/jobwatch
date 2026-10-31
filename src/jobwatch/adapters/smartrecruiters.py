@@ -8,6 +8,7 @@ import httpx
 from jobwatch.adapters.base import AdapterError
 from jobwatch.http import request
 from jobwatch.models import Company, NormalizedJob
+from jobwatch.textutil import html_to_text
 
 PAGE_SIZE = 100
 _HOSTS = {
@@ -62,7 +63,6 @@ class SmartRecruitersAdapter:
         *,
         include_content: bool = False,
     ) -> list[NormalizedJob]:
-        del include_content
         board = company.board or self.parse_identity(company.careers_url).get("board")
         if not board:
             raise AdapterError(f"{company.id}: SmartRecruiters company id is missing")
@@ -97,7 +97,28 @@ class SmartRecruitersAdapter:
                 break
             if len(rows) < PAGE_SIZE and total is None:
                 break
+        if include_content:
+            company.extra["_sr_board"] = board
         return out
+
+    def enrich_one(self, company: Company, client: httpx.Client, job: NormalizedJob) -> str | None:
+        board = company.board or company.extra.get("_sr_board")
+        if not board:
+            try:
+                board = self.parse_identity(company.careers_url).get("board")
+            except AdapterError:
+                board = None
+        if not board:
+            return None
+        api = f"https://api.smartrecruiters.com/v1/companies/{board}/postings/{job.job_id}"
+        response = request(client, "GET", api)
+        if response.status_code >= 400:
+            return None
+        try:
+            payload = response.json()
+        except ValueError:
+            return None
+        return _detail_text(payload)
 
 
 def _map(company: Company, item: dict[str, Any], board: str) -> NormalizedJob | None:
@@ -128,7 +149,26 @@ def _map(company: Company, item: dict[str, Any], board: str) -> NormalizedJob | 
         location=location,
         department=department,
         posted_at=item.get("releasedDate"),
+        fingerprint=item.get("releasedDate") or str(job_id),
+        detail_ref=str(job_id),
     )
+
+
+def _detail_text(payload: dict[str, Any]) -> str | None:
+    chunks: list[str] = []
+    job_ad = payload.get("jobAd") or {}
+    sections = job_ad.get("sections") if isinstance(job_ad, dict) else None
+    if isinstance(sections, dict):
+        for section in sections.values():
+            if isinstance(section, dict) and section.get("text"):
+                chunks.append(str(section["text"]))
+    for key in ("jobDescription", "description"):
+        value = payload.get(key)
+        if isinstance(value, str):
+            chunks.append(value)
+    if not chunks:
+        return None
+    return html_to_text("\n".join(chunks))
 
 
 def _format_location(loc: dict[str, Any]) -> str | None:

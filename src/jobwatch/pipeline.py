@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from jobwatch.adapters import ADAPTERS, AdapterError, NeedsBrowserError, apply_identity, get_adapter
 from jobwatch.detect import detect_from_url
-from jobwatch.filter import apply_filter
+from jobwatch.filter import apply_filter, needs_description
 from jobwatch.http import RateLimiter, build_client
-from jobwatch.models import AppConfig, Company, CompanyResult, FilterSettings
+from jobwatch.models import AppConfig, Company, CompanyResult, FilterSettings, NormalizedJob
 from jobwatch.output import err_console
 from jobwatch.store import Store
 
@@ -29,8 +29,6 @@ def scan_companies(
     limiter = RateLimiter(config.defaults.rate_limit_rps)
     timeout = config.defaults.timeout_s
     client = build_client(timeout=timeout)
-    # Attach limiter via a closure on request() calls inside adapters? Adapters call
-    # jobwatch.http.request without a limiter. We wrap the client.request instead.
     _install_limiter(client, limiter)
 
     results: list[CompanyResult] = []
@@ -94,6 +92,17 @@ def _scan_one(
         if verbose:
             err_console.print(f"[dim]fetch[/dim] {company.id} via {adapter_name}")
         jobs = adapter.fetch(company, client, include_content=settings.check_description)
+        if settings.check_description:
+            cached, fetched_detail, truncated = enrich_jobs(
+                adapter, company, client, jobs, store, settings, verbose=verbose
+            )
+            result.cached_descriptions = cached
+            result.enriched = fetched_detail
+            if truncated:
+                result.warning = (
+                    f"description enrich capped at {settings.max_enrich} detail fetches; "
+                    "cached bodies are reused next run"
+                )
         if apply_new_grad_filter:
             jobs = apply_filter(jobs, company, settings)
         result.jobs = jobs
@@ -105,10 +114,11 @@ def _scan_one(
             mark_missing_closed=True,
         )
         if company.extra.get("workday_truncated"):
-            result.warning = (
+            extra = (
                 "Workday reported total=2000; results are capped. "
                 "Facet split is Phase 2 — see PLAN.md §5.4."
             )
+            result.warning = f"{result.warning} {extra}".strip() if result.warning else extra
     except NeedsBrowserError as exc:
         result.error = str(exc)
         result.needs_browser = True
@@ -120,6 +130,48 @@ def _scan_one(
         result.error = f"{type(exc).__name__}: {exc}"
         err_console.print(f"[red]{company.id}:[/red] {result.error}")
     return result
+
+
+def enrich_jobs(
+    adapter,
+    company: Company,
+    client,
+    jobs: list[NormalizedJob],
+    store: Store,
+    settings: FilterSettings,
+    *,
+    verbose: bool = False,
+) -> tuple[int, int, bool]:
+    """Fill descriptions from SQLite cache or adapter.enrich_one. Returns (cached, fetched, truncated)."""
+    enrich_one = getattr(adapter, "enrich_one", None)
+    cached = 0
+    fetched = 0
+    truncated = False
+    for job in jobs:
+        if job.description:
+            continue
+        body = store.cached_description(company.id, job.source, job.job_id, job.fingerprint)
+        if body:
+            job.description = body
+            cached += 1
+            continue
+        if not settings.check_description or enrich_one is None:
+            continue
+        if not needs_description(job, company, settings):
+            continue
+        if fetched >= settings.max_enrich:
+            truncated = True
+            continue
+        try:
+            body = enrich_one(company, client, job)
+        except Exception:  # noqa: BLE001 — one detail 404 must not kill the company
+            body = None
+        if body:
+            job.description = body
+            fetched += 1
+            if verbose:
+                err_console.print(f"[dim]enrich[/dim] {company.id} {job.job_id}")
+    return cached, fetched, truncated
 
 
 def _install_limiter(client, limiter: RateLimiter) -> None:

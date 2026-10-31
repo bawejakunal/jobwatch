@@ -25,6 +25,7 @@ def test_ashby_drops_unlisted_and_maps_fields() -> None:
     assert jobs[0].title == "Software Engineer, Early Career"
     assert jobs[0].workplace == "Remote"
     assert jobs[0].department == "Engineering"
+    assert jobs[0].location == "Remote - US, New York, NY"
 
 
 def test_ashby_parse_api_url() -> None:

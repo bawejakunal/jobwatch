@@ -28,6 +28,10 @@ class NormalizedJob:
     workplace: str | None = None
     posted_at: str | None = None
     description: str | None = None
+    fingerprint: str | None = None
+    detail_ref: str | None = None
+    year_match: bool = False
+    match_on: str | None = None
     raw: dict[str, Any] | None = None
 
 
@@ -61,7 +65,7 @@ class Detection:
     ats: ATSName
     careers_url: str
     identity: dict[str, str]
-    confidence: Literal["url", "html", "hint"] = "url"
+    confidence: Literal["url", "html", "hint", "probe"] = "url"
     notes: str = ""
 
 
@@ -69,16 +73,22 @@ class Detection:
 class FilterSettings:
     include_title: list[str]
     exclude_title: list[str]
-    check_description: bool = False
+    check_description: bool = True
     description_exclude: list[str] = field(default_factory=list)
+    include_description: list[str] = field(default_factory=list)
+    preferred_grad_year: int = 2027
+    max_enrich: int = 80
 
 
 @dataclass(slots=True)
 class Defaults:
     include_title: list[str]
     exclude_title: list[str]
-    check_description: bool = False
+    check_description: bool = True
     description_exclude: list[str] = field(default_factory=list)
+    include_description: list[str] = field(default_factory=list)
+    preferred_grad_year: int = 2027
+    max_enrich: int = 80
     rate_limit_rps: float = 1.5
     timeout_s: float = 25.0
     max_pages: int | None = None
@@ -99,3 +109,5 @@ class CompanyResult:
     error: str | None = None
     needs_browser: bool = False
     warning: str | None = None
+    enriched: int = 0
+    cached_descriptions: int = 0

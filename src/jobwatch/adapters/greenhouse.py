@@ -9,6 +9,7 @@ import httpx
 from jobwatch.adapters.base import AdapterError
 from jobwatch.http import request
 from jobwatch.models import Company, NormalizedJob
+from jobwatch.textutil import html_to_text
 
 _HOSTS = {"boards.greenhouse.io", "job-boards.greenhouse.io", "boards-api.greenhouse.io"}
 _FOR_RE = re.compile(r"[?&]for=([A-Za-z0-9_-]+)", re.I)
@@ -100,11 +101,9 @@ def _map(company: Company, item: dict[str, Any]) -> NormalizedJob | None:
     depts = item.get("departments") or []
     if depts and isinstance(depts[0], dict):
         department = depts[0].get("name")
-    description = item.get("content")
-    if isinstance(description, str):
-        description = description.replace("&lt;", "<").replace("&gt;", ">")
-    else:
-        description = None
+    raw_content = item.get("content")
+    description = html_to_text(raw_content) if isinstance(raw_content, str) else None
+    posted = item.get("updated_at") or item.get("first_published")
     return NormalizedJob(
         company_id=company.id,
         source="greenhouse",
@@ -115,4 +114,5 @@ def _map(company: Company, item: dict[str, Any]) -> NormalizedJob | None:
         department=department,
         posted_at=item.get("first_published") or item.get("updated_at"),
         description=description,
+        fingerprint=str(posted) if posted else None,
     )

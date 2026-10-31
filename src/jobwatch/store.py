@@ -34,6 +34,8 @@ class Store:
               first_seen  TEXT NOT NULL,
               last_seen   TEXT NOT NULL,
               closed_at   TEXT,
+              description TEXT,
+              fingerprint TEXT,
               PRIMARY KEY (company_id, source, job_id)
             );
             CREATE TABLE IF NOT EXISTS scans (
@@ -47,7 +49,14 @@ class Store:
             );
             """
         )
+        self._ensure_column("jobs", "description", "TEXT")
+        self._ensure_column("jobs", "fingerprint", "TEXT")
         self.conn.commit()
+
+    def _ensure_column(self, table: str, name: str, spec: str) -> None:
+        cols = {row[1] for row in self.conn.execute(f"PRAGMA table_info({table})")}
+        if name not in cols:
+            self.conn.execute(f"ALTER TABLE {table} ADD COLUMN {name} {spec}")
 
     def close(self) -> None:
         self.conn.close()
@@ -77,6 +86,27 @@ class Store:
         )
         self.conn.commit()
 
+    def cached_description(
+        self,
+        company_id: str,
+        source: str,
+        job_id: str,
+        fingerprint: str | None,
+    ) -> str | None:
+        row = self.conn.execute(
+            """
+            SELECT description, fingerprint FROM jobs
+            WHERE company_id=? AND source=? AND job_id=?
+            """,
+            (company_id, source, job_id),
+        ).fetchone()
+        if not row or not row["description"]:
+            return None
+        cached_fp = row["fingerprint"]
+        if fingerprint and cached_fp and cached_fp != fingerprint:
+            return None
+        return str(row["description"])
+
     def upsert_jobs(
         self,
         company_id: str,
@@ -99,8 +129,8 @@ class Store:
                     """
                     INSERT INTO jobs (
                       company_id, source, job_id, title, url, location, department,
-                      first_seen, last_seen, closed_at
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)
+                      first_seen, last_seen, closed_at, description, fingerprint
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?)
                     """,
                     (
                         company_id,
@@ -112,6 +142,8 @@ class Store:
                         job.department,
                         seen_at,
                         seen_at,
+                        job.description,
+                        job.fingerprint,
                     ),
                 )
                 new_jobs.append(job)
@@ -119,7 +151,9 @@ class Store:
                 self.conn.execute(
                     """
                     UPDATE jobs
-                    SET title=?, url=?, location=?, department=?, last_seen=?, closed_at=NULL
+                    SET title=?, url=?, location=?, department=?, last_seen=?, closed_at=NULL,
+                        description=COALESCE(?, description),
+                        fingerprint=COALESCE(?, fingerprint)
                     WHERE company_id=? AND source=? AND job_id=?
                     """,
                     (
@@ -128,6 +162,8 @@ class Store:
                         job.location,
                         job.department,
                         seen_at,
+                        job.description,
+                        job.fingerprint,
                         company_id,
                         source,
                         job.job_id,

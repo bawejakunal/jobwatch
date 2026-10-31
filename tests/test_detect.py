@@ -48,6 +48,26 @@ def test_detect_unknown_url() -> None:
     assert detect_from_url("https://careers.example.com/jobs") is None
 
 
+def test_probe_ashby_from_marketing_domain() -> None:
+    import httpx
+    import respx
+
+    from jobwatch.detect import detect
+
+    payload = {"apiVersion": "1", "jobs": [{"id": "1", "title": "X", "jobUrl": "https://jobs.ashbyhq.com/harvey/1"}]}
+    with respx.mock:
+        respx.get("https://www.harvey.ai/careers").mock(
+            return_value=httpx.Response(200, text="<html>join us</html>")
+        )
+        respx.get("https://api.ashbyhq.com/posting-api/job-board/harvey").mock(
+            return_value=httpx.Response(200, json=payload)
+        )
+        found = detect("https://www.harvey.ai/careers", httpx.Client())
+    assert found.ats == "ashby"
+    assert found.identity.get("board") == "harvey"
+    assert found.confidence == "probe"
+
+
 def test_detect_greenhouse_embed_html() -> None:
     html = (Path(__file__).parent / "fixtures" / "detect" / "custom_greenhouse.html").read_text()
     found = detect_from_html("https://discord.com/careers", html)

@@ -152,7 +152,10 @@ def add(
         if not path.exists():
             dump_config(
                 AppConfig(
-                    defaults=Defaults(include_title=list(DEFAULT_INCLUDE), exclude_title=list(DEFAULT_EXCLUDE)),
+                    defaults=Defaults(
+                        include_title=list(DEFAULT_INCLUDE),
+                        exclude_title=list(DEFAULT_EXCLUDE),
+                    ),
                     companies=[],
                 ),
                 path,
@@ -202,7 +205,12 @@ def scan(
     check_description: bool = typer.Option(
         False,
         "--check-description",
-        help="Also apply description-year heuristics (and fetch Greenhouse content).",
+        help="Force description enrichment and body matching on (already the default).",
+    ),
+    no_enrich: bool = typer.Option(
+        False,
+        "--no-enrich",
+        help="Skip description fetches and body matching (title-only).",
     ),
     config: Optional[Path] = typer.Option(None, "--config"),
     db: Optional[Path] = typer.Option(None, "--db"),
@@ -213,7 +221,8 @@ def scan(
     cfg = _require_config(config)
     db_path = find_db_path(str(db) if db else None, Path(cfg.path) if cfg.path else None)
     store = Store(db_path)
-    settings = filter_settings(cfg, check_description=True if check_description else None)
+    enrich_flag: bool | None = True if check_description else (False if no_enrich else None)
+    settings = filter_settings(cfg, check_description=enrich_flag)
     try:
         results = scan_companies(
             cfg,

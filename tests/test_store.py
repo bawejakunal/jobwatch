@@ -49,3 +49,14 @@ def test_first_seen_and_closed(tmp_path: Path) -> None:
     row = store.conn.execute("SELECT closed_at FROM jobs WHERE job_id='2'").fetchone()
     assert row["closed_at"] is None
     store.close()
+
+
+def test_description_cache_fingerprint(tmp_path: Path) -> None:
+    store = Store(tmp_path / "db.sqlite")
+    job = _job("1")
+    job.description = "class of 2027"
+    job.fingerprint = "v1"
+    store.upsert_jobs("acme", "greenhouse", [job], seen_at="2026-01-01T00:00:00+00:00")
+    assert store.cached_description("acme", "greenhouse", "1", "v1") == "class of 2027"
+    assert store.cached_description("acme", "greenhouse", "1", "v2") is None
+    store.close()

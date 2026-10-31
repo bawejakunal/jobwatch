@@ -8,7 +8,7 @@
       "team": "Platform",
       "employmentType": "FullTime",
       "location": "Remote - US",
-      "secondaryLocations": [],
+      "secondaryLocations": [{"location": "New York, NY"}],
       "publishedAt": "2024-03-04T14:29:08.532+00:00",
       "isListed": true,
       "isRemote": true,

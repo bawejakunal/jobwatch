@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 
 from jobwatch.models import Company, Defaults, FilterSettings
-from jobwatch.config import DEFAULT_EXCLUDE, DEFAULT_INCLUDE
+from jobwatch.config import DEFAULT_DESCRIPTION_INCLUDE, DEFAULT_EXCLUDE, DEFAULT_INCLUDE
 
 FIXTURES = Path(__file__).resolve().parent / "fixtures"
 
@@ -20,7 +20,9 @@ def filter_settings() -> FilterSettings:
     return FilterSettings(
         include_title=list(DEFAULT_INCLUDE),
         exclude_title=list(DEFAULT_EXCLUDE),
+        include_description=list(DEFAULT_DESCRIPTION_INCLUDE),
         check_description=False,
+        preferred_grad_year=2027,
     )
 
 

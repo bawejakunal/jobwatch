@@ -28,15 +28,16 @@ uv run jobwatch --help
 ## Quick start
 
 ```bash
-jobwatch init                          # writes ./companies.yaml from the example
-# edit companies.yaml — or:
-jobwatch add https://job-boards.greenhouse.io/discord
-jobwatch add https://jobs.lever.co/palantir
+jobwatch init                          # writes Sierra + Harvey into ./companies.yaml
+# or:
+jobwatch add https://sierra.ai/careers --name Sierra
+jobwatch add https://www.harvey.ai/careers --name Harvey
 jobwatch list
-jobwatch scan                          # new postings only
+jobwatch scan                          # new postings only (2027 matches first)
 jobwatch scan --all                    # every open match
 jobwatch scan --json
-jobwatch scan --company discord --csv out.csv
+jobwatch scan --company sierra --csv out.csv
+jobwatch scan --no-enrich              # title-only, skip detail fetches
 ```
 
 Detection without writing config:
@@ -50,9 +51,9 @@ jobwatch detect https://careers-fhcrc.icims.com/jobs/search?ss=1 --no-fetch
 
 1. Loads `companies.yaml` (cwd, `./.jobwatch/`, or `~/.config/jobwatch/`).
 2. For each enabled company, hits the matching adapter.
-3. Keeps titles that look new-grad (configurable include/exclude). Campus boards can set `scope: all`.
-4. Upserts SQLite (`first_seen`, `last_seen`, `closed_at`).
-5. Prints a table. **NEW** means first seen on this run. `--all` prints the full open set.
+3. Keeps new-grad / intern / 2027 matches. Titles first; if that is inconclusive, the job body (cached after the first fetch). Campus boards can set `scope: all`.
+4. Upserts SQLite (`first_seen`, `last_seen`, `closed_at`, cached `description`).
+5. Prints a table. **NEW** means first seen on this run. **2027** is flagged and sorted first. `--all` prints the full open set.
 
 Failed companies are isolated: one 403 does not abort the scan (exit code 1 if anything failed).
 
@@ -69,7 +70,7 @@ Failed companies are isolated: one 403 does not abort the scan (exit code 1 if a
 
 SQLite: `--db` / `JOBWATCH_DB`, else `./jobwatch.sqlite` next to a local yaml, else `$JOBWATCH_HOME/jobwatch.sqlite`.
 
-Example whitelist (one live board per ATS) is in `companies.example.yaml`.
+Default whitelist is Sierra and Harvey (both Ashby). Per-ATS samples are in `companies.ats-examples.yaml`.
 
 ## Adapters
 

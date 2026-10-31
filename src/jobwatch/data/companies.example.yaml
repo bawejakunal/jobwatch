@@ -1,5 +1,10 @@
-# Copy to companies.yaml (jobwatch init) and edit.
-# Hosted ATS URLs are enough — jobwatch add <url> fills ats + identity.
+# Copy to companies.yaml (`jobwatch init`) and edit.
+# `jobwatch add <url>` fills ats + identity. Marketing careers pages are fine
+# when the ATS is embedded (Sierra) or when the domain slug matches a hosted
+# board (Harvey → jobs.ashbyhq.com/harvey).
+#
+# Per-ATS samples (Greenhouse, Lever, Workday, SmartRecruiters, iCIMS) live in
+# companies.ats-examples.yaml — useful for adapter tests, not the default whitelist.
 
 defaults:
   include_title:
@@ -21,8 +26,6 @@ defaults:
     - campus
     - graduate program
     - graduate programme
-    - university
-    - "2026"
     - "2027"
   exclude_title:
     - senior
@@ -35,48 +38,21 @@ defaults:
     - vp
     - manager
     - lead
-  check_description: false
+  check_description: true
+  preferred_grad_year: 2027
+  max_enrich: 80
   rate_limit_rps: 1.5
   timeout_s: 25
 
 companies:
-  - id: discord
-    name: Discord
-    careers_url: https://job-boards.greenhouse.io/discord
-    ats: greenhouse
-    board: discord
-
-  - id: palantir
-    name: Palantir
-    careers_url: https://jobs.lever.co/palantir
-    ats: lever
-    board: palantir
-
-  - id: ashby
-    name: Ashby
-    careers_url: https://jobs.ashbyhq.com/ashby
+  - id: sierra
+    name: Sierra
+    careers_url: https://sierra.ai/careers
     ats: ashby
-    board: ashby
+    board: Sierra
 
-  - id: nvidia
-    name: NVIDIA
-    careers_url: https://nvidia.wd5.myworkdayjobs.com/en-US/NVIDIAExternalCareerSite
-    ats: workday
-    host: nvidia.wd5.myworkdayjobs.com
-    tenant: nvidia
-    site: NVIDIAExternalCareerSite
-    locale: en-US
-    # Cap paging for a first run. Drop this key to read up to the 2,000-row wrap.
-    max_pages: 3
-
-  - id: smartrecruiters
-    name: SmartRecruiters
-    careers_url: https://jobs.smartrecruiters.com/smartrecruiters
-    ats: smartrecruiters
-    board: smartrecruiters
-
-  - id: fred-hutch
-    name: Fred Hutch
-    careers_url: https://careers-fhcrc.icims.com/jobs/search?ss=1
-    ats: icims
-    portal: https://careers-fhcrc.icims.com
+  - id: harvey
+    name: Harvey
+    careers_url: https://www.harvey.ai/careers
+    ats: ashby
+    board: harvey

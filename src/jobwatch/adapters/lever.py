@@ -132,6 +132,7 @@ def _map(company: Company, item: dict[str, Any]) -> NormalizedJob | None:
         workplace=item.get("workplaceType"),
         posted_at=posted_at,
         description=item.get("descriptionPlain"),
+        fingerprint=posted_at or str(job_id),
     )
 
 

@@ -28,9 +28,29 @@ DEFAULT_INCLUDE = [
     "campus",
     "graduate program",
     "graduate programme",
-    "university",
-    "2026",
     "2027",
+]
+
+# Stricter than titles: bare "university" / "campus" in a JD is noise.
+DEFAULT_DESCRIPTION_INCLUDE = [
+    "new grad",
+    "new graduate",
+    "new-grad",
+    "university grad",
+    "university graduate",
+    "college grad",
+    "college graduate",
+    "recent grad",
+    "recent graduate",
+    "entry level",
+    "entry-level",
+    "early career",
+    "early-career",
+    "junior",
+    "intern",
+    "internship",
+    "graduate program",
+    "graduate programme",
 ]
 
 DEFAULT_EXCLUDE = [
@@ -110,8 +130,11 @@ def load_config(path: Path) -> AppConfig:
     defaults = Defaults(
         include_title=list(defaults_raw.get("include_title") or DEFAULT_INCLUDE),
         exclude_title=list(defaults_raw.get("exclude_title") or DEFAULT_EXCLUDE),
-        check_description=bool(defaults_raw.get("check_description", False)),
+        check_description=bool(defaults_raw.get("check_description", True)),
         description_exclude=list(defaults_raw.get("description_exclude") or []),
+        include_description=list(defaults_raw.get("include_description") or DEFAULT_DESCRIPTION_INCLUDE),
+        preferred_grad_year=int(defaults_raw.get("preferred_grad_year") or 2027),
+        max_enrich=int(defaults_raw.get("max_enrich") or 80),
         rate_limit_rps=float(defaults_raw.get("rate_limit_rps") or 1.5),
         timeout_s=float(defaults_raw.get("timeout_s") or 25.0),
         max_pages=defaults_raw.get("max_pages"),
@@ -128,6 +151,9 @@ def filter_settings(config: AppConfig, *, check_description: bool | None = None)
             config.defaults.check_description if check_description is None else check_description
         ),
         description_exclude=config.defaults.description_exclude,
+        include_description=config.defaults.include_description or list(DEFAULT_DESCRIPTION_INCLUDE),
+        preferred_grad_year=config.defaults.preferred_grad_year,
+        max_enrich=config.defaults.max_enrich,
     )
 
 
@@ -183,8 +209,11 @@ def dump_config(config: AppConfig, path: Path) -> None:
         "defaults": {
             "include_title": config.defaults.include_title,
             "exclude_title": config.defaults.exclude_title,
+            "include_description": config.defaults.include_description,
             "check_description": config.defaults.check_description,
             "description_exclude": config.defaults.description_exclude,
+            "preferred_grad_year": config.defaults.preferred_grad_year,
+            "max_enrich": config.defaults.max_enrich,
             "rate_limit_rps": config.defaults.rate_limit_rps,
             "timeout_s": config.defaults.timeout_s,
             "max_pages": config.defaults.max_pages,
@@ -233,7 +262,11 @@ def append_company(path: Path, company: Company) -> AppConfig:
         config = load_config(path)
     else:
         config = AppConfig(
-            defaults=Defaults(include_title=list(DEFAULT_INCLUDE), exclude_title=list(DEFAULT_EXCLUDE)),
+            defaults=Defaults(
+                include_title=list(DEFAULT_INCLUDE),
+                exclude_title=list(DEFAULT_EXCLUDE),
+                include_description=list(DEFAULT_DESCRIPTION_INCLUDE),
+            ),
             companies=[],
             path=str(path),
         )

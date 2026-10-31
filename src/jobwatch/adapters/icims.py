@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import re
 from urllib.parse import urljoin, urlparse
 
@@ -9,6 +10,7 @@ from bs4 import BeautifulSoup
 from jobwatch.adapters.base import AdapterError, NeedsBrowserError
 from jobwatch.http import request
 from jobwatch.models import Company, NormalizedJob
+from jobwatch.textutil import html_to_text
 
 JOB_HREF_RE = re.compile(r"/jobs/(\d+)/", re.I)
 PAGE_OF_RE = re.compile(r"Page\s+(\d+)\s+of\s+(\d+)", re.I)
@@ -59,7 +61,7 @@ class IcimsAdapter:
         *,
         include_content: bool = False,
     ) -> list[NormalizedJob]:
-        del include_content
+        del include_content  # detail fetch happens in enrich_one, gated by the pipeline
         portal = company.portal
         if not portal:
             portal = self.parse_identity(company.careers_url).get("portal")
@@ -114,6 +116,19 @@ class IcimsAdapter:
                 break
         return out
 
+    def enrich_one(self, company: Company, client: httpx.Client, job: NormalizedJob) -> str | None:
+        portal = (company.portal or "").rstrip("/")
+        if not portal:
+            try:
+                portal = self.parse_identity(company.careers_url).get("portal") or ""
+            except AdapterError:
+                return None
+        url = f"{portal}/jobs/{job.job_id}/job"
+        response = request(client, "GET", url, params={"in_iframe": "1"})
+        if response.status_code >= 400:
+            return None
+        return parse_job_description(response.text)
+
 
 def parse_search_html(html: str, *, portal: str, company_id: str) -> tuple[list[NormalizedJob], int | None]:
     soup = BeautifulSoup(html, "lxml")
@@ -149,9 +164,33 @@ def parse_search_html(html: str, *, portal: str, company_id: str) -> tuple[list[
                 title=title,
                 url=urljoin(portal + "/", href),
                 location=location,
+                fingerprint=title,
+                detail_ref=job_id,
             )
         )
     return jobs, total_pages
+
+
+def parse_job_description(html: str) -> str | None:
+    soup = BeautifulSoup(html, "lxml")
+    for script in soup.select('script[type="application/ld+json"]'):
+        raw = script.string or script.get_text() or ""
+        try:
+            data = json.loads(raw)
+        except ValueError:
+            continue
+        items = data if isinstance(data, list) else [data]
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+            types = item.get("@type")
+            type_ok = types == "JobPosting" or (isinstance(types, list) and "JobPosting" in types)
+            if type_ok and item.get("description"):
+                return html_to_text(str(item["description"]))
+    body = soup.select_one(".iCIMS_JobContent, .iCIMS_InfoMsg, [itemprop=description]")
+    if body:
+        return html_to_text(str(body))
+    return None
 
 
 def _title_from_card(card, link) -> str:

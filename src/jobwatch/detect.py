@@ -66,6 +66,9 @@ def detect(url: str, client: httpx.Client | None = None) -> Detection:
         if sniffed:
             sniffed.careers_url = url
             return sniffed
+        probed = probe_hosted_boards(url, client)
+        if probed:
+            return probed
         if found:
             found.notes = "URL matched an ATS host but identity is incomplete; HTML sniff failed"
             return found
@@ -76,6 +79,128 @@ def detect(url: str, client: httpx.Client | None = None) -> Detection:
     finally:
         if owns_client:
             client.close()
+
+
+def probe_hosted_boards(url: str, client: httpx.Client) -> Detection | None:
+    """When a marketing careers page hides the ATS, try common board slugs.
+
+    harvey.ai/careers does not embed Ashby; jobs.ashbyhq.com/harvey does.
+    """
+    slugs = _candidate_slugs(url)
+    if not slugs:
+        return None
+    for slug in slugs:
+        ashby = _probe_ashby(client, slug)
+        if ashby:
+            ashby.careers_url = url
+            return ashby
+        gh = _probe_greenhouse(client, slug)
+        if gh:
+            gh.careers_url = url
+            return gh
+        lever = _probe_lever(client, slug)
+        if lever:
+            lever.careers_url = url
+            return lever
+    return None
+
+
+def _candidate_slugs(url: str) -> list[str]:
+    host = (urlparse(url).hostname or "").lower()
+    if not host or any(
+        token in host
+        for token in (
+            "greenhouse.io",
+            "lever.co",
+            "ashbyhq.com",
+            "myworkdayjobs.com",
+            "myworkdaysite.com",
+            "smartrecruiters.com",
+            "icims.com",
+        )
+    ):
+        return []
+    labels = [p for p in host.split(".") if p and p not in {"www", "careers", "jobs", "job"}]
+    if not labels:
+        return []
+    sld = labels[0]
+    out = [sld]
+    if "-" in sld:
+        out.append(sld.replace("-", ""))
+    return list(dict.fromkeys(out))
+
+
+def _probe_ashby(client: httpx.Client, slug: str) -> Detection | None:
+    api = f"https://api.ashbyhq.com/posting-api/job-board/{slug}"
+    try:
+        response = request(client, "GET", api)
+    except AdapterError:
+        return None
+    if response.status_code != 200:
+        return None
+    try:
+        payload = response.json()
+    except ValueError:
+        return None
+    jobs = payload.get("jobs") if isinstance(payload, dict) else None
+    if not isinstance(jobs, list) or not jobs:
+        return None
+    return Detection(
+        ats="ashby",
+        careers_url=api,
+        identity={"board": slug, "ats": "ashby"},
+        confidence="probe",
+        notes=f"probed {api} ({len(jobs)} postings)",
+    )
+
+
+def _probe_greenhouse(client: httpx.Client, slug: str) -> Detection | None:
+    api = f"https://boards-api.greenhouse.io/v1/boards/{slug}/jobs"
+    try:
+        response = request(client, "GET", api)
+    except AdapterError:
+        return None
+    if response.status_code != 200:
+        return None
+    try:
+        payload = response.json()
+    except ValueError:
+        return None
+    jobs = payload.get("jobs") if isinstance(payload, dict) else None
+    if not isinstance(jobs, list) or not jobs:
+        return None
+    return Detection(
+        ats="greenhouse",
+        careers_url=api,
+        identity={"board": slug, "ats": "greenhouse"},
+        confidence="probe",
+        notes=f"probed {api} ({len(jobs)} postings)",
+    )
+
+
+def _probe_lever(client: httpx.Client, slug: str) -> Detection | None:
+    for region, host in (("global", "https://api.lever.co"), ("eu", "https://api.eu.lever.co")):
+        api = f"{host}/v0/postings/{slug}"
+        try:
+            response = request(client, "GET", api, params={"mode": "json", "limit": 1})
+        except AdapterError:
+            continue
+        if response.status_code != 200:
+            continue
+        try:
+            payload = response.json()
+        except ValueError:
+            continue
+        if isinstance(payload, list) and payload:
+            ident = {"board": slug, "ats": "lever", "region": region}
+            return Detection(
+                ats="lever",
+                careers_url=api,
+                identity=ident,
+                confidence="probe",
+                notes=f"probed {api} ({len(payload)}+ postings)",
+            )
+    return None
 
 
 def _identity_complete(detection: Detection) -> bool:

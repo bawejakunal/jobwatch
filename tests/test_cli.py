@@ -54,6 +54,6 @@ def test_init_and_list(tmp_path: Path, monkeypatch) -> None:
     assert (tmp_path / "companies.yaml").is_file()
     listed = runner.invoke(app, ["list", "--config", str(tmp_path / "companies.yaml")])
     assert listed.exit_code == 0
-    assert "discord" in listed.stdout
-    assert "greenhouse" in listed.stdout
-    assert "icims" in listed.stdout
+    assert "sierra" in listed.stdout
+    assert "harvey" in listed.stdout
+    assert "ashby" in listed.stdout
