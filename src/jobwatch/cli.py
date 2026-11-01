@@ -122,18 +122,28 @@ def add(
     url: str = typer.Argument(..., help="Careers page or hosted ATS board URL."),
     name: Optional[str] = typer.Option(None, "--name", help="Display name."),
     company_id: Optional[str] = typer.Option(None, "--id", help="Stable id used in SQLite."),
-    scope: str = typer.Option("new_grad", "--scope", help="new_grad (default) or all."),
+    scope: Optional[str] = typer.Option(
+        None,
+        "--scope",
+        help="new_grad or all. Defaults to all for YC jobs URLs, otherwise new_grad.",
+    ),
     config: Optional[Path] = typer.Option(None, "--config", help="companies.yaml to write."),
     no_probe: bool = typer.Option(False, "--no-probe", help="Skip a live fetch that verifies the board."),
 ) -> None:
     """Detect the ATS for a URL and append it to the whitelist."""
-    if scope not in {"new_grad", "all"}:
-        raise typer.BadParameter("scope must be new_grad or all")
     client = build_client()
     try:
         found = detect(url, client)
+        if scope is None:
+            scope = "all" if found.ats == "yc" else "new_grad"
+        if scope not in {"new_grad", "all"}:
+            raise typer.BadParameter("scope must be new_grad or all")
         company = company_from_detection(found, name=name, company_id=company_id)
         company.scope = scope  # type: ignore[assignment]
+        if found.ats == "yc":
+            from jobwatch.adapters.yc import DEFAULT_MAX_AGE_DAYS
+
+            company.max_age_days = DEFAULT_MAX_AGE_DAYS
         if not no_probe and found.ats != "browser":
             from jobwatch.adapters import get_adapter
 
@@ -163,6 +173,42 @@ def add(
     append_company(path, company)
     console.print(f"Added [bold]{company.id}[/bold] ({company.ats}) to {path}")
     _print_detection(found)
+
+
+@app.command("sync-yc")
+def sync_yc_cmd(
+    config: Optional[Path] = typer.Option(None, "--config", help="companies.yaml to update."),
+) -> None:
+    """Replace YC companies with the current US hiring directory.
+
+    Sierra, Harvey, and any other non-YC companies stay put. Each YC entry
+    watches that company's public jobs page and keeps roles from about the
+    last 90 days.
+    """
+    from jobwatch.ycdir import fetch_us_hiring_companies, merge_yc_companies
+
+    path = find_config_path(str(config) if config else None)
+    if path is None or not path.is_file():
+        err_console.print(
+            "No companies.yaml found. Run [bold]jobwatch init[/bold] first, then [bold]jobwatch sync-yc[/bold]."
+        )
+        raise typer.Exit(2)
+    cfg = load_config(path)
+    client = build_client()
+    try:
+        hits = fetch_us_hiring_companies(client)
+    except AdapterError as exc:
+        err_console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(1) from exc
+    finally:
+        client.close()
+    before = sum(1 for company in cfg.companies if company.ats == "yc")
+    cfg.companies, skipped = merge_yc_companies(cfg.companies, hits)
+    dump_config(cfg, path)
+    after = sum(1 for company in cfg.companies if company.ats == "yc")
+    console.print(
+        f"Wrote [bold]{after}[/bold] YC companies to {path} (replaced {before}, skipped {skipped} already listed)."
+    )
 
 
 @app.command(name="list")

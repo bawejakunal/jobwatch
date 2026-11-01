@@ -7,6 +7,7 @@ from jobwatch.adapters.icims import IcimsAdapter
 from jobwatch.adapters.lever import LeverAdapter
 from jobwatch.adapters.smartrecruiters import SmartRecruitersAdapter
 from jobwatch.adapters.workday import WorkdayAdapter
+from jobwatch.adapters.yc import YcAdapter
 
 ADAPTERS: dict[str, Adapter] = {
     adapter.name: adapter
@@ -17,6 +18,7 @@ ADAPTERS: dict[str, Adapter] = {
         WorkdayAdapter(),
         SmartRecruitersAdapter(),
         IcimsAdapter(),
+        YcAdapter(),
     )
 }
 

@@ -27,6 +27,8 @@ CASES = [
     ("https://api.smartrecruiters.com/v1/companies/acme/postings", "smartrecruiters", "acme"),
     ("https://careers-fhcrc.icims.com/jobs/search?ss=1", "icims", None),
     ("https://jobs-preview2test.icims.com/jobs/1709/customer-service/job", "icims", None),
+    ("https://www.ycombinator.com/companies/infer/jobs", "yc", "infer"),
+    ("https://ycombinator.com/companies/infer/jobs/", "yc", "infer"),
 ]
 
 
@@ -46,6 +48,7 @@ def test_detect_from_url(url: str, ats: str, board: str | None) -> None:
 
 def test_detect_unknown_url() -> None:
     assert detect_from_url("https://careers.example.com/jobs") is None
+    assert detect_from_url("https://www.ycombinator.com/companies?isHiring=true") is None
 
 
 def test_probe_ashby_from_marketing_domain() -> None:
@@ -84,6 +87,7 @@ def test_detect_html_each_ats() -> None:
         "workday": '<a href="https://acme.wd5.myworkdayjobs.com/en-US/Careers">careers</a>',
         "smartrecruiters": '<a href="https://jobs.smartrecruiters.com/acme/1">job</a>',
         "icims": '<iframe src="https://careers-acme.icims.com/jobs/search?in_iframe=1"></iframe>',
+        "yc": '<a href="https://www.ycombinator.com/companies/infer/jobs">jobs</a>',
     }
     for ats, html in snippets.items():
         found = detect_from_html("https://careers.example.com", html)

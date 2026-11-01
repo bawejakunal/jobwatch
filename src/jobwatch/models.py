@@ -10,6 +10,7 @@ ATSName = Literal[
     "workday",
     "smartrecruiters",
     "icims",
+    "yc",
     "browser",
 ]
 
@@ -57,6 +58,7 @@ class Company:
     locations: object | None = None
     timeout_s: float | None = None
     max_pages: int | None = None
+    max_age_days: int | None = None
     extra: dict[str, Any] = field(default_factory=dict)
 
     def display_name(self) -> str:

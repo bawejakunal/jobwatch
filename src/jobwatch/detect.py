@@ -117,6 +117,7 @@ def _candidate_slugs(url: str) -> list[str]:
             "myworkdaysite.com",
             "smartrecruiters.com",
             "icims.com",
+            "ycombinator.com",
         )
     ):
         return []
@@ -209,7 +210,7 @@ def _identity_complete(detection: Detection) -> bool:
         return bool(ident.get("host") and ident.get("tenant") and ident.get("site"))
     if detection.ats == "icims":
         return bool(ident.get("portal"))
-    if detection.ats in {"greenhouse", "lever", "ashby", "smartrecruiters"}:
+    if detection.ats in {"greenhouse", "lever", "ashby", "smartrecruiters", "yc"}:
         return bool(ident.get("board"))
     return False
 
