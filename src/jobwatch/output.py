@@ -46,6 +46,48 @@ def render_table(rows: list[tuple[NormalizedJob, bool]], *, title: str) -> None:
     console.print(table)
 
 
+def company_progress_lines(
+    index: int,
+    total: int,
+    result: CompanyResult,
+    *,
+    show_all: bool,
+) -> list[str]:
+    """Plain progress text for one finished company. Index is 1-based."""
+    name = result.company.display_name()
+    shown = [] if result.error else (result.jobs if show_all else result.new_jobs)
+    if result.error:
+        status = "failed"
+    else:
+        label = "open" if show_all else "new"
+        status = f"{len(shown)} {label}"
+    lines = [f"[{index}/{total}] {name}  {status}"]
+    for job in shown:
+        location = _location_cell(job)
+        parts = [job.title]
+        if location:
+            parts.append(location)
+        parts.append(job.url)
+        lines.append("  " + "  ".join(parts))
+    if result.warning:
+        lines.append(f"warning: {result.warning}")
+    return lines
+
+
+def print_company_progress(
+    index: int,
+    total: int,
+    result: CompanyResult,
+    *,
+    show_all: bool,
+) -> None:
+    for line in company_progress_lines(index, total, result, show_all=show_all):
+        if line.startswith("warning:"):
+            err_console.print(f"[yellow]{result.company.id}:[/yellow] {result.warning}")
+        else:
+            err_console.print(line, highlight=False, markup=False)
+
+
 def rows_from_results(results: list[CompanyResult], *, show_all: bool) -> list[tuple[NormalizedJob, bool]]:
     rows: list[tuple[NormalizedJob, bool]] = []
     new_ids = {(job.source, job.job_id, job.company_id) for r in results for job in r.new_jobs}
