@@ -193,8 +193,15 @@ def _company(item: dict[str, Any], defaults: Defaults) -> Company:
         locations=parse_location_settings(item["locations"]) if "locations" in item else None,
         timeout_s=item.get("timeout_s") or defaults.timeout_s,
         max_pages=item.get("max_pages", defaults.max_pages),
+        max_age_days=_optional_int(item.get("max_age_days")),
         extra={k: v for k, v in item.items() if k not in _KNOWN},
     )
+
+
+def _optional_int(value: object) -> int | None:
+    if value is None or value == "":
+        return None
+    return int(value)  # type: ignore[arg-type]
 
 
 _KNOWN = {
@@ -215,6 +222,7 @@ _KNOWN = {
     "exclude_title",
     "timeout_s",
     "max_pages",
+    "max_age_days",
     "locations",
 }
 
@@ -242,13 +250,13 @@ def dump_config(config: AppConfig, path: Path) -> None:
             "timeout_s": config.defaults.timeout_s,
             "max_pages": config.defaults.max_pages,
         },
-        "companies": [_company_to_dict(c) for c in config.companies],
+        "companies": [_company_to_dict(c, config.defaults) for c in config.companies],
     }
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(yaml.safe_dump(payload, sort_keys=False, allow_unicode=True))
+    path.write_text(yaml.safe_dump(payload, sort_keys=False, allow_unicode=True, width=4096))
 
 
-def _company_to_dict(company: Company) -> dict[str, Any]:
+def _company_to_dict(company: Company, defaults: Defaults | None = None) -> dict[str, Any]:
     data: dict[str, Any] = {
         "id": company.id,
         "name": company.name,
@@ -270,6 +278,7 @@ def _company_to_dict(company: Company) -> dict[str, Any]:
         "locations",
         "timeout_s",
         "max_pages",
+        "max_age_days",
     ):
         value = getattr(company, key)
         if value is None:
@@ -277,6 +286,10 @@ def _company_to_dict(company: Company) -> dict[str, Any]:
         if key == "enabled" and value is True:
             continue
         if key == "scope" and value == "new_grad":
+            continue
+        if key == "timeout_s" and defaults is not None and value == defaults.timeout_s:
+            continue
+        if key == "max_pages" and defaults is not None and value == defaults.max_pages:
             continue
         if key == "locations" and value is not None:
             data[key] = _locations_to_dict(value)

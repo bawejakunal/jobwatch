@@ -79,6 +79,8 @@ src/jobwatch/
     workday.py
     smartrecruiters.py
     icims.py
+    yc.py
+  ycdir.py                     # US hiring directory sync
   browser.py                   # recipe schema + stub
   llm.py                       # provider-agnostic stub
 tests/
@@ -239,12 +241,13 @@ Per-company keys:
 | `id` | Stable slug; SQLite key |
 | `name` | Display name |
 | `careers_url` | What `add` stored; detection input |
-| `ats` | Hint: `greenhouse` `lever` `ashby` `workday` `smartrecruiters` `icims` `browser` |
-| `board` | Greenhouse token / Lever site / Ashby board / SmartRecruiters company id |
+| `ats` | Hint: `greenhouse` `lever` `ashby` `workday` `smartrecruiters` `icims` `yc` `browser` |
+| `board` | Greenhouse token / Lever site / Ashby board / SmartRecruiters company id / YC slug |
 | `host` `tenant` `site` `locale` | Workday |
 | `portal` | iCIMS origin |
 | `region` | Lever: `global` (default) or `eu` |
 | `scope` | `new_grad` (default) or `all` |
+| `max_age_days` | Drop postings older than this many days. Used by the YC adapter (shipped entries set 90). |
 | `include_title` / `exclude_title` | Override or extend defaults |
 | `enabled` | Skip when false |
 | `timeout_s` `max_pages` `rate_limit_rps` | Per-company overrides |
@@ -480,7 +483,7 @@ Stop when:
 4. **Custom domains** — careers page is `jobs.example.com` wrapping an iframe to `careers-example.icims.com`. URL detection misses it; HTML sniff looks for `icims.com` and `iCIMS_`.
 5. **No descriptions on the list.** Enrichment GETs `/jobs/{id}/job?in_iframe=1` and reads schema.org `JobPosting` JSON-LD. Cached by job id + title fingerprint; skipped when the title already decided keep/drop; capped by `max_enrich`.
 6. **Pager comments lie.** The HTML comments mention `rel="next"` even on the last page. Use visible `Page N of M` or an empty card list.
-7. **ToS.** iCIMS (and most ATS) dislike unauthenticated bulk scraping. jobwatch is a personal whitelist monitor with rate limits — keep the list short and the interval daily.
+7. **ToS.** iCIMS (and most ATS) dislike unauthenticated bulk scraping. jobwatch is a personal whitelist monitor with rate limits — keep the interval daily.
 
 Phase 2 recipe for a blocked tenant:
 
@@ -493,6 +496,18 @@ max_depth: 1
 max_pages: 30
 harvest_xhr: true
 ```
+
+### 5.7 YC company jobs (`ycombinator.com/companies/{slug}/jobs`)
+
+Work at a Startup's public jobs index is a short sample (a few dozen roles) of a few thousand postings, and the embedded Algolia key cannot list them. The public directory at `https://www.ycombinator.com/companies?isHiring=true&regions=United%20States%20of%20America` is the list of companies. Each company's jobs page is server-rendered Inertia HTML. The `data-page` attribute includes `props.jobPostings`.
+
+`createdAt` is a Rails `time_ago_in_words` phrase (`18 days`, `about 2 months`, `3 months`, `over 1 year`), not an ISO timestamp. The adapter keeps phrases of about `max_age_days` or less. Month phrases use 30-day buckets, so `3 months` stays at 90 days and `4 months` does not. `over N` counts as the next bucket. The job id is the fingerprint, because the relative phrase changes every day.
+
+Shipped YC entries set `scope: all` and `max_age_days: 90`. Founding Engineer and similar titles are kept. The US location filter still applies to each posting. Detail pages are not fetched.
+
+The directory search key is read from the companies page on every `jobwatch sync-yc` (it expires within a couple of days). One Algolia query only returns the first 1,000 hits, so a short page is split into `regions:"Remote"` and `NOT regions:"Remote"`, which together match the same US hiring filter. `sync-yc` replaces `ats: yc` rows and leaves Sierra, Harvey, and any other non-YC company in place. A slug that is already used by another ATS is not added again.
+
+A scan of the full US hiring list is about 1,200 requests, roughly 15 minutes at 1.5 requests/second.
 
 ---
 
@@ -630,6 +645,7 @@ jobwatch --help
 jobwatch init [--force]              # copy example yaml + .env into JOBWATCH_HOME or cwd
 jobwatch detect <url>                # print ATS + identity, no write
 jobwatch add <url> [--name] [--id] [--scope new_grad|all] [--no-probe]
+jobwatch sync-yc                     # refresh ats: yc from the US hiring directory
 jobwatch list                        # companies in the whitelist
 jobwatch scan [options]
 ```

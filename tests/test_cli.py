@@ -15,6 +15,7 @@ def test_help() -> None:
     assert "scan" in result.stdout
     assert "add" in result.stdout
     assert "detect" in result.stdout
+    assert "sync-yc" in result.stdout
     scan = runner.invoke(app, ["scan", "--help"])
     assert scan.exit_code == 0
     assert "--any-location" in scan.stdout
