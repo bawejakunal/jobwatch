@@ -9,6 +9,12 @@ from dotenv import load_dotenv
 
 from jobwatch.locations import LocationSettings, parse_location_settings
 from jobwatch.models import AppConfig, Company, Defaults, FilterSettings, Scope
+from jobwatch.rolesearch import (
+    ROLE_BODY_SOFTWARE,
+    ROLE_TITLE_DROP,
+    ROLE_TITLE_KEEP,
+    ROLE_TITLE_SOFTWARE,
+)
 
 DEFAULT_INCLUDE = [
     "new grad",
@@ -134,6 +140,12 @@ def load_config(path: Path) -> AppConfig:
         check_description=bool(defaults_raw.get("check_description", True)),
         description_exclude=list(defaults_raw.get("description_exclude") or []),
         include_description=list(defaults_raw.get("include_description") or DEFAULT_DESCRIPTION_INCLUDE),
+        role_title_keep=_phrase_list(defaults_raw.get("role_title_keep"), ROLE_TITLE_KEEP),
+        role_title_drop=_phrase_list(defaults_raw.get("role_title_drop"), ROLE_TITLE_DROP),
+        role_title_software=_phrase_list(
+            defaults_raw.get("role_title_software"), ROLE_TITLE_SOFTWARE
+        ),
+        role_body_software=_phrase_list(defaults_raw.get("role_body_software"), ROLE_BODY_SOFTWARE),
         preferred_grad_year=int(defaults_raw.get("preferred_grad_year") or 2027),
         max_enrich=int(defaults_raw.get("max_enrich") or 80),
         locations=parse_location_settings(defaults_raw.get("locations")),
@@ -164,6 +176,10 @@ def filter_settings(
         ),
         description_exclude=config.defaults.description_exclude,
         include_description=config.defaults.include_description or list(DEFAULT_DESCRIPTION_INCLUDE),
+        role_title_keep=list(config.defaults.role_title_keep),
+        role_title_drop=list(config.defaults.role_title_drop),
+        role_title_software=list(config.defaults.role_title_software),
+        role_body_software=list(config.defaults.role_body_software),
         preferred_grad_year=config.defaults.preferred_grad_year,
         max_enrich=config.defaults.max_enrich,
         locations=locations,
@@ -190,12 +206,28 @@ def _company(item: dict[str, Any], defaults: Defaults) -> Company:
         enabled=bool(item.get("enabled", True)),
         include_title=item.get("include_title"),
         exclude_title=item.get("exclude_title"),
+        role_title_keep=_optional_phrases(item, "role_title_keep"),
+        role_title_drop=_optional_phrases(item, "role_title_drop"),
+        role_title_software=_optional_phrases(item, "role_title_software"),
+        role_body_software=_optional_phrases(item, "role_body_software"),
         locations=parse_location_settings(item["locations"]) if "locations" in item else None,
         timeout_s=item.get("timeout_s") or defaults.timeout_s,
         max_pages=item.get("max_pages", defaults.max_pages),
         max_age_days=_optional_int(item.get("max_age_days")),
         extra={k: v for k, v in item.items() if k not in _KNOWN},
     )
+
+
+def _phrase_list(value: object, fallback: list[str]) -> list[str]:
+    if not value:
+        return list(fallback)
+    return [str(item) for item in value]  # type: ignore[union-attr]
+
+
+def _optional_phrases(item: dict[str, Any], key: str) -> list[str] | None:
+    if key not in item or item[key] is None:
+        return None
+    return [str(part) for part in item[key] or []]
 
 
 def _optional_int(value: object) -> int | None:
@@ -220,6 +252,10 @@ _KNOWN = {
     "enabled",
     "include_title",
     "exclude_title",
+    "role_title_keep",
+    "role_title_drop",
+    "role_title_software",
+    "role_body_software",
     "timeout_s",
     "max_pages",
     "max_age_days",
@@ -241,6 +277,10 @@ def dump_config(config: AppConfig, path: Path) -> None:
             "include_title": config.defaults.include_title,
             "exclude_title": config.defaults.exclude_title,
             "include_description": config.defaults.include_description,
+            "role_title_keep": config.defaults.role_title_keep,
+            "role_title_drop": config.defaults.role_title_drop,
+            "role_title_software": config.defaults.role_title_software,
+            "role_body_software": config.defaults.role_body_software,
             "check_description": config.defaults.check_description,
             "description_exclude": config.defaults.description_exclude,
             "preferred_grad_year": config.defaults.preferred_grad_year,
@@ -275,6 +315,10 @@ def _company_to_dict(company: Company, defaults: Defaults | None = None) -> dict
         "enabled",
         "include_title",
         "exclude_title",
+        "role_title_keep",
+        "role_title_drop",
+        "role_title_software",
+        "role_body_software",
         "locations",
         "timeout_s",
         "max_pages",

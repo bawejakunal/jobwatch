@@ -52,7 +52,7 @@ jobwatch detect https://careers-fhcrc.icims.com/jobs/search?ss=1 --no-fetch
 
 1. Loads `companies.yaml` (cwd, `./.jobwatch/`, or `~/.config/jobwatch/`).
 2. For each enabled company, hits the matching adapter.
-3. Keeps new-grad / intern / 2027 matches. Titles first; if that is inconclusive, the job body (cached after the first fetch). Campus boards can set `scope: all`. The shipped YC companies use `scope: all` and `max_age_days: 90`, so a recent Founding Engineer is kept and a posting older than about three months is dropped. Default location filter is **US-only** (any US office, US remote, or unspecified Remote). `--any-location` turns it off.
+3. Keeps software-engineering roles. A title does not have to say new grad or 2027; those matches are still sorted first. The title is searched first (in-memory SQLite FTS5). Sales, marketing, recruiting, and similar titles are dropped. GTM, solutions, support, and forward-deployed engineers are kept. When the title names no function, the job text is searched for a software phrase such as "software engineer". Senior, staff, principal, director, manager, and lead titles are left out unless they also say new grad, intern, or 2027. Campus boards can set `scope: all` to keep every posting. YC companies use `scope: all` with the software search still on, plus `max_age_days: 90`. Default location filter is **US-only** (any US office, US remote, or unspecified Remote). `--any-location` turns it off.
 4. Upserts SQLite (`first_seen`, `last_seen`, `closed_at`, cached `description`).
 5. Prints a table. **NEW** means first seen on this run. **2027** is flagged and sorted first. `--all` prints the full open set.
 
@@ -85,7 +85,7 @@ Default whitelist is Sierra and Harvey (both Ashby). Per-ATS samples are in `com
 | iCIMS | HTML ` /jobs/search?ss=1&in_iframe=1&pr=` — **no public JSON** |
 | YC | HTML `https://www.ycombinator.com/companies/{slug}/jobs` — Inertia `data-page` JSON. Keeps `createdAt` within `max_age_days` (90 on the shipped list). |
 
-`jobwatch add <url>` recognizes all of the above from the hosted URL (and from embeds on a custom domain). A YC jobs URL is stored with `scope: all` and `max_age_days: 90`.
+`jobwatch add <url>` recognizes all of the above from the hosted URL (and from embeds on a custom domain). A YC jobs URL is stored with `scope: all` and `max_age_days: 90`. YC listings are still limited to software-engineering roles. A YC job page is fetched only when the title does not decide the role.
 
 The default whitelist is Sierra, Harvey, and every company on the [YC US hiring directory](https://www.ycombinator.com/companies?isHiring=true&regions=United%20States%20of%20America). That directory is about 1,200 companies. `jobwatch sync-yc` replaces the YC block with a fresh directory read and leaves every other company in place. A full scan is about 15 minutes at the default 1.5 requests/second.
 

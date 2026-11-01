@@ -14,6 +14,7 @@ from jobwatch.adapters.base import AdapterError
 from jobwatch.http import request
 from jobwatch.locations import classify_text
 from jobwatch.models import Company, NormalizedJob
+from jobwatch.textutil import html_to_text
 
 # Rails time_ago_in_words buckets. "3 months" is about 90 days; "4 months" is older.
 DEFAULT_MAX_AGE_DAYS = 90
@@ -94,6 +95,55 @@ class YcAdapter:
                 continue
             out.append(mapped)
         return out
+
+    def enrich_one(self, company: Company, client: httpx.Client, job: NormalizedJob) -> str | None:
+        del company
+        if not job.url:
+            return None
+        try:
+            response = request(client, "GET", job.url, headers={"Accept": "text/html"})
+        except AdapterError:
+            return None
+        if response.status_code >= 400:
+            return None
+        return json_ld_description(response.text)
+
+
+def json_ld_description(html: str) -> str | None:
+    """Plain text of a schema.org JobPosting description, if the page has one."""
+    soup = BeautifulSoup(html, "lxml")
+    for script in soup.find_all("script", attrs={"type": "application/ld+json"}):
+        raw = script.string or script.get_text()
+        if not raw or not raw.strip():
+            continue
+        try:
+            payload = json.loads(raw)
+        except json.JSONDecodeError:
+            continue
+        for node in _json_ld_nodes(payload):
+            kind = node.get("@type")
+            if kind != "JobPosting" and not (isinstance(kind, list) and "JobPosting" in kind):
+                continue
+            description = node.get("description")
+            if isinstance(description, str):
+                return html_to_text(description)
+    return None
+
+
+def _json_ld_nodes(payload: Any) -> list[dict[str, Any]]:
+    nodes: list[dict[str, Any]] = []
+    if isinstance(payload, list):
+        for item in payload:
+            nodes.extend(_json_ld_nodes(item))
+        return nodes
+    if not isinstance(payload, dict):
+        return nodes
+    nodes.append(payload)
+    graph = payload.get("@graph")
+    if isinstance(graph, list):
+        for item in graph:
+            nodes.extend(_json_ld_nodes(item))
+    return nodes
 
 
 def extract_job_postings(html: str) -> list[dict[str, Any]]:
