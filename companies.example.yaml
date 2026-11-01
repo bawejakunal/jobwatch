@@ -2,9 +2,13 @@
 # Sierra and Harvey stay on their Ashby boards. Every other company is from
 # the YC US hiring directory:
 # https://www.ycombinator.com/companies?isHiring=true&regions=United%20States%20of%20America
-# Those entries use scope: all and max_age_days: 90, so recent roles such as
-# Founding Engineer are kept and postings older than about three months are
-# dropped. `jobwatch sync-yc` refreshes that block.
+# Those entries use scope: all and max_age_days: 90. Recent software
+# engineering roles are kept, including ones that do not say new grad.
+# Sales, marketing, and recruiting titles are dropped. GTM, solutions,
+# support, and forward-deployed engineers are kept. Postings older than
+# about three months are dropped. Phrase lists default in code; replace
+# one with role_title_keep, role_title_drop, role_title_software, or
+# role_body_software. `jobwatch sync-yc` refreshes that block.
 #
 # Per-ATS samples (Greenhouse, Lever, Workday, SmartRecruiters, iCIMS) live in
 # companies.ats-examples.yaml — useful for adapter tests, not the default whitelist.

@@ -3,6 +3,13 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Literal
 
+from jobwatch.rolesearch import (
+    default_role_body_software,
+    default_role_title_drop,
+    default_role_title_keep,
+    default_role_title_software,
+)
+
 ATSName = Literal[
     "greenhouse",
     "lever",
@@ -55,6 +62,10 @@ class Company:
     enabled: bool = True
     include_title: list[str] | None = None
     exclude_title: list[str] | None = None
+    role_title_keep: list[str] | None = None
+    role_title_drop: list[str] | None = None
+    role_title_software: list[str] | None = None
+    role_body_software: list[str] | None = None
     locations: object | None = None
     timeout_s: float | None = None
     max_pages: int | None = None
@@ -81,6 +92,10 @@ class FilterSettings:
     check_description: bool = True
     description_exclude: list[str] = field(default_factory=list)
     include_description: list[str] = field(default_factory=list)
+    role_title_keep: list[str] = field(default_factory=default_role_title_keep)
+    role_title_drop: list[str] = field(default_factory=default_role_title_drop)
+    role_title_software: list[str] = field(default_factory=default_role_title_software)
+    role_body_software: list[str] = field(default_factory=default_role_body_software)
     preferred_grad_year: int = 2027
     max_enrich: int = 80
     locations: object | None = None
@@ -93,6 +108,10 @@ class Defaults:
     check_description: bool = True
     description_exclude: list[str] = field(default_factory=list)
     include_description: list[str] = field(default_factory=list)
+    role_title_keep: list[str] = field(default_factory=default_role_title_keep)
+    role_title_drop: list[str] = field(default_factory=default_role_title_drop)
+    role_title_software: list[str] = field(default_factory=default_role_title_software)
+    role_body_software: list[str] = field(default_factory=default_role_body_software)
     preferred_grad_year: int = 2027
     max_enrich: int = 80
     locations: object | None = None

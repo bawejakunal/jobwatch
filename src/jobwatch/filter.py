@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 
 from jobwatch.models import Company, FilterSettings, NormalizedJob
+from jobwatch.rolesearch import INDEX
 
 STRONG_INCLUDE = (
     "new grad",
@@ -24,24 +25,16 @@ STRONG_INCLUDE = (
     "campus",
 )
 
-JUNIOR_YEARS = re.compile(
-    r"\b(?:0|1)\s*[-–]\s*(?:1|2)\s*years?\b"
-    r"|\b(?:0|1)\s+to\s+(?:1|2)\s*years?\b"
-    r"|\bless than (?:one|1|two|2) years?\b"
-    r"|\bnew[\s-]+grad",
-    re.I,
-)
-SENIOR_YEARS = re.compile(
-    r"\b(?:[5-9]|1\d)\s*\+\s*years?\b"
-    r"|\b(?:[5-9]|1\d)\s+(?:or more |plus )?\s*years?\s+(?:of )?(?:experience|exp)\b",
-    re.I,
-)
-
 _WORDY = re.compile(r"^[a-z0-9]{1,4}$", re.I)
+_STAFF_ROLE = re.compile(
+    r"\bmembers?\s+of\s+technical\s+staff\b|\btechnical\s+staff\b|\bmts\b",
+    re.I,
+)
 
 
 def _normalize(text: str) -> str:
-    return re.sub(r"\s+", " ", text.casefold()).strip()
+    text = text.casefold().replace("\u2013", "-").replace("\u2014", "-").replace("\u2011", "-")
+    return re.sub(r"\s+", " ", text).strip()
 
 
 def _hit(haystack: str, needle: str) -> bool:
@@ -68,32 +61,78 @@ def preferred_year_hit(text: str, year: int) -> bool:
     return re.search(rf"\b{year}\b", text) is not None
 
 
-def title_excluded(job: NormalizedJob, company: Company, settings: FilterSettings) -> bool:
-    exclude = company.exclude_title if company.exclude_title is not None else settings.exclude_title
-    title = _normalize(job.title)
-    strong = any(_hit(title, token) for token in STRONG_INCLUDE) or preferred_year_hit(
-        title, settings.preferred_grad_year
+def _phrases(company: Company, settings: FilterSettings, name: str) -> list[str]:
+    override = getattr(company, name)
+    if override is not None:
+        return override
+    return getattr(settings, name)
+
+
+def _lists(
+    company: Company, settings: FilterSettings
+) -> tuple[list[str], list[str], list[str], list[str]]:
+    return (
+        _phrases(company, settings, "role_title_keep"),
+        _phrases(company, settings, "role_title_drop"),
+        _phrases(company, settings, "role_title_software"),
+        _phrases(company, settings, "role_body_software"),
     )
-    return bool(exclude) and _any_hit(title, exclude) and not strong
 
 
-def title_included(job: NormalizedJob, company: Company, settings: FilterSettings) -> bool:
-    include = company.include_title if company.include_title is not None else settings.include_title
-    title = _normalize(job.title)
-    return bool(include) and _any_hit(title, include)
+def _role_applies(company: Company) -> bool:
+    """scope: all keeps every posting, except YC, where it only skips the new-grad label."""
+    return not (company.scope == "all" and company.ats != "yc")
+
+
+def _decide(
+    title: str,
+    department: str | None,
+    body: str,
+    lists: tuple[list[str], list[str], list[str], list[str]],
+    *,
+    search_body: bool,
+) -> str:
+    """Return title, description, exclude, or miss."""
+    keep, drop, software, body_terms = lists
+    with INDEX:
+        INDEX.load(title, department, body if search_body else "")
+        if INDEX.matches("title", keep):
+            return "title"
+        if INDEX.matches("title", drop):
+            return "exclude"
+        if INDEX.matches("title", software):
+            return "title"
+        department_is_software = bool(department) and INDEX.matches("department", software)
+        if department_is_software and not INDEX.matches("department", drop):
+            return "title"
+        if search_body and body and INDEX.matches("body", body_terms):
+            return "description"
+    return "miss"
+
+
+def _seniority_excluded(title: str, exclude: list[str]) -> bool:
+    scrubbed = _normalize(_STAFF_ROLE.sub(" ", title))
+    return bool(exclude) and _any_hit(scrubbed, exclude)
+
+
+def _early_career(title: str, year: int) -> bool:
+    return any(_hit(title, token) for token in STRONG_INCLUDE) or preferred_year_hit(title, year)
 
 
 def needs_description(job: NormalizedJob, company: Company, settings: FilterSettings) -> bool:
     """True when a detail fetch could change the keep/drop decision."""
-    if company.scope == "all":
+    if not _role_applies(company):
         return False
-    if job.description:
+    if job.description or not settings.check_description:
         return False
-    if title_excluded(job, company, settings):
-        return False
-    if title_included(job, company, settings):
-        return False
-    return True
+    decision = _decide(
+        job.title,
+        job.department,
+        "",
+        _lists(company, settings),
+        search_body=False,
+    )
+    return decision == "miss"
 
 
 def is_new_grad(job: NormalizedJob, company: Company, settings: FilterSettings) -> bool:
@@ -110,35 +149,22 @@ def classify(
     body = _normalize(job.description) if job.description else ""
     year_hit = preferred_year_hit(title, year) or (bool(body) and preferred_year_hit(body, year))
 
-    if company.scope == "all":
+    if not _role_applies(company):
         return True, year_hit, "scope"
 
-    include = company.include_title if company.include_title is not None else settings.include_title
-    desc_include = settings.include_description or include
     exclude = company.exclude_title if company.exclude_title is not None else settings.exclude_title
-    strong = any(_hit(title, token) for token in STRONG_INCLUDE) or preferred_year_hit(title, year)
-
-    if exclude and _any_hit(title, exclude) and not strong:
+    decision = _decide(
+        job.title,
+        job.department,
+        body,
+        _lists(company, settings),
+        search_body=bool(settings.check_description and body),
+    )
+    if decision not in {"title", "description"}:
         return False, year_hit, None
-
-    if include and _any_hit(title, include):
-        if settings.check_description and job.description and _description_too_senior(job.description):
-            return False, year_hit, None
-        return True, year_hit, "title"
-
-    if settings.check_description and body:
-        desc_hit = _any_hit(body, desc_include) or preferred_year_hit(body, year) or bool(
-            JUNIOR_YEARS.search(job.description or "")
-        )
-        if desc_hit and not _description_too_senior(job.description or ""):
-            return True, year_hit, "description"
-    return False, year_hit, None
-
-
-def _description_too_senior(description: str) -> bool:
-    if JUNIOR_YEARS.search(description):
-        return False
-    return SENIOR_YEARS.search(description) is not None
+    if _seniority_excluded(title, exclude) and not _early_career(title, year):
+        return False, year_hit, None
+    return True, year_hit, decision
 
 
 def apply_filter(

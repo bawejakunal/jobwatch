@@ -503,7 +503,7 @@ Work at a Startup's public jobs index is a short sample (a few dozen roles) of a
 
 `createdAt` is a Rails `time_ago_in_words` phrase (`18 days`, `about 2 months`, `3 months`, `over 1 year`), not an ISO timestamp. The adapter keeps phrases of about `max_age_days` or less. Month phrases use 30-day buckets, so `3 months` stays at 90 days and `4 months` does not. `over N` counts as the next bucket. The job id is the fingerprint, because the relative phrase changes every day.
 
-Shipped YC entries set `scope: all` and `max_age_days: 90`. Founding Engineer and similar titles are kept. The US location filter still applies to each posting. Detail pages are not fetched.
+Shipped YC entries set `scope: all` and `max_age_days: 90`. That scope skips the new-grad keyword requirement, and the software-role search still applies, so a recent Founding Engineer is kept and an Account Executive is not. The US location filter still applies to each posting. A detail page is fetched only when the title and department do not decide the role.
 
 The directory search key is read from the companies page on every `jobwatch sync-yc` (it expires within a couple of days). One Algolia query only returns the first 1,000 hits, so a short page is split into `regions:"Remote"` and `NOT regions:"Remote"`, which together match the same US hiring filter. `sync-yc` replaces `ats: yc` rows and leaves Sierra, Harvey, and any other non-YC company in place. A slug that is already used by another ATS is not added again.
 
@@ -569,19 +569,25 @@ Rules:
 
 Order:
 
-1. If `company.scope == all` → keep.
-2. Title **exclude** hits, unless a **strong include** also hits (`new grad`, `intern`, `university grad`, `early career`, preferred year, …). “Staff Software Engineer, University Graduate” stays. “Senior Software Engineer” goes.
-3. Title **include** hit → keep (then drop if the description looks senior: `5+ years` / `7+ years` with no `0-2 years` / `new grad` counter-signal).
-4. Else, if `check_description` (default on) and we have a body: keep when the **description include** list, preferred year, or `0-1`/`0-2` years hits, unless the body looks senior.
-5. Else drop.
+1. If `company.scope == all` and the company is not YC → keep. YC uses `scope: all` only to skip the new-grad label requirement.
+2. Role search, in-memory SQLite FTS5, first hit wins:
+   - Title matches `role_title_keep` (GTM, solutions, support, and forward-deployed engineers) → software role.
+   - Title matches `role_title_drop` (sales, account executive, marketing, recruiting, and the rest of the business list) → drop. Sales Engineer drops here.
+   - Title matches `role_title_software` (`software engineer`, `founding engineer`, `engineer`, `member of technical staff`, …) → software role.
+   - Department is a software function and not a business function → software role.
+   - Else, if `check_description` and the body matches `role_body_software` (phrases such as `software engineer`, not the bare word engineer) → software role.
+   - Else drop.
+3. Seniority `exclude_title` (`senior`, `staff`, `principal`, `director`, `head of`, `architect`, `distinguished`, `vp`, `manager`, `lead`) drops a software role unless the title also has an early-career signal (`new grad`, `intern`, `university graduate`, …) or the preferred year. “Staff Software Engineer, University Graduate” stays. “Senior Software Engineer” goes. “Member of Technical Staff” is not treated as staff-level.
 
-**2027:** `preferred_grad_year` defaults to 2027. Matches are flagged (`year_match`) and sorted first in the table. `2026` is not in the default include list; add it under `include_title` if you still want last year's cycle.
+Years-of-experience text in the description does not drop a software role. The description is used to name an undecided function and to set the 2027 flag.
 
-Internships stay in the default include list.
+**2027:** `preferred_grad_year` defaults to 2027. Matches are flagged (`year_match`) and sorted first in the table. A software title that says 2026, or that says neither year, is still kept.
 
-Matching: case-insensitive; short tokens (`lead`, `jr`, `vp`, `2027`) use word boundaries so “Leadership Development Program” is not excluded for `lead`, and “International” is not an intern.
+The four phrase lists default in code. Set `role_title_keep`, `role_title_drop`, `role_title_software`, or `role_body_software` under `defaults`, or on one company, to replace that list (not merge). Phrases are plain words. The matcher tokenizes them; hyphenated and spaced forms match the same phrase.
 
-Company-level `include_title` / `exclude_title` replace the default lists when set (not merged), so a campus board can say `include_title: ["*"]` via `scope: all` instead.
+`include_title` is no longer the keep gate. `exclude_title` is still the seniority list. A campus board keeps every posting with `scope: all`.
+
+Matching for seniority: case-insensitive; short tokens (`lead`, `jr`, `vp`) use word boundaries so “Leadership Development Program” is not excluded for `lead`.
 
 ### Location filter (default US-only)
 
