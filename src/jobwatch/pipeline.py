@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from collections.abc import Callable
+
 from jobwatch.adapters import ADAPTERS, AdapterError, NeedsBrowserError, apply_identity, get_adapter
 from jobwatch.detect import detect_from_url
 from jobwatch.filter import apply_filter, needs_description
@@ -18,6 +20,7 @@ def scan_companies(
     company_ids: list[str] | None = None,
     apply_new_grad_filter: bool = True,
     verbose: bool = False,
+    on_company: Callable[[int, int, CompanyResult], None] | None = None,
 ) -> list[CompanyResult]:
     selected = [c for c in config.companies if c.enabled]
     if company_ids:
@@ -53,6 +56,8 @@ def scan_companies(
             new_count += len(result.new_jobs)
             if result.error:
                 errors.append({"company": company.id, "error": result.error})
+            if on_company is not None:
+                on_company(len(results), len(selected), result)
     finally:
         store.finish_scan(
             scan_id,

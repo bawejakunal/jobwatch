@@ -24,7 +24,15 @@ from jobwatch.config import (
 from jobwatch.detect import company_from_detection, detect, detect_from_url
 from jobwatch.http import build_client
 from jobwatch.models import AppConfig, Defaults
-from jobwatch.output import console, err_console, render_table, rows_from_results, write_csv, write_json
+from jobwatch.output import (
+    console,
+    err_console,
+    print_company_progress,
+    render_table,
+    rows_from_results,
+    write_csv,
+    write_json,
+)
 from jobwatch.pipeline import known_ats, scan_companies
 from jobwatch.store import Store
 
@@ -265,7 +273,11 @@ def scan(
     ),
     config: Optional[Path] = typer.Option(None, "--config"),
     db: Optional[Path] = typer.Option(None, "--db"),
-    quiet: bool = typer.Option(False, "--quiet", help="Skip the table; still write JSON/CSV."),
+    quiet: bool = typer.Option(
+        False,
+        "--quiet",
+        help="Skip live progress and the table; still write JSON/CSV.",
+    ),
     verbose: bool = typer.Option(False, "-v", "--verbose"),
 ) -> None:
     """Fetch every enabled company, update SQLite, print new (or all) matches."""
@@ -274,6 +286,9 @@ def scan(
     store = Store(db_path)
     enrich_flag: bool | None = True if check_description else (False if no_enrich else None)
     settings = filter_settings(cfg, check_description=enrich_flag, any_location=any_location)
+    def _on_company(index: int, total: int, result) -> None:
+        print_company_progress(index, total, result, show_all=all_open)
+
     try:
         results = scan_companies(
             cfg,
@@ -282,6 +297,7 @@ def scan(
             company_ids=company,
             apply_new_grad_filter=not no_filter,
             verbose=verbose,
+            on_company=None if quiet else _on_company,
         )
     except AdapterError as exc:
         err_console.print(f"[red]{exc}[/red]")
@@ -293,9 +309,6 @@ def scan(
     title = "Currently open matches" if all_open else "New postings since last scan"
     if not quiet:
         render_table(rows, title=title)
-        for result in results:
-            if result.warning:
-                err_console.print(f"[yellow]{result.company.id}:[/yellow] {result.warning}")
         err_console.print(f"[dim]state: {db_path}[/dim]")
 
     if as_json:
