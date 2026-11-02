@@ -1,0 +1,27 @@
+{
+  "filters": {
+    "positions": []
+  },
+  "count": 2,
+  "positions": [
+    {
+      "id": 790298014263,
+      "name": "AI Engineer 6 - AI Foundation & Tooling, Ads Platform",
+      "location": "Los Gatos,California,United States of America",
+      "locations": ["Los Gatos, California"],
+      "canonicalPositionUrl": "https://explore.jobs.netflix.net/careers/job/790298014263",
+      "department": "Data & Insights",
+      "job_description": "<p>Build <b>tooling</b> for ads.</p>",
+      "t_create": 1730500000
+    },
+    {
+      "id": 790298014264,
+      "name": "Content Counsel",
+      "location": "Los Angeles, California",
+      "canonicalPositionUrl": "https://explore.jobs.netflix.net/careers/job/790298014264",
+      "department": "Legal",
+      "job_description": "<p>Legal review.</p>",
+      "t_create": 1730500001
+    }
+  ]
+}

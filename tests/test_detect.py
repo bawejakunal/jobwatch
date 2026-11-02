@@ -27,6 +27,23 @@ CASES = [
     ("https://api.smartrecruiters.com/v1/companies/acme/postings", "smartrecruiters", "acme"),
     ("https://careers-fhcrc.icims.com/jobs/search?ss=1", "icims", None),
     ("https://jobs-preview2test.icims.com/jobs/1709/customer-service/job", "icims", None),
+    (
+        "https://apply.careers.microsoft.com/careers?domain=microsoft.com",
+        "eightfold",
+        "microsoft.com",
+    ),
+    ("https://explore.jobs.netflix.net/careers", "eightfold", "netflix.com"),
+    ("https://ats.rippling.com/rippling/jobs", "rippling", "rippling"),
+    ("https://www.amazon.jobs/en/search", "amazon", None),
+    ("https://jobs.apple.com/en-us/search", "apple", None),
+    (
+        "https://www.google.com/about/careers/applications/jobs/results/",
+        "google",
+        None,
+    ),
+    ("https://www.linkedin.com/jobs/search/?f_C=1337", "linkedin", "1337"),
+    ("https://www.atlassian.com/company/careers/all-jobs", "atlassian", None),
+    ("https://www.optiver.com/join-us/jobs/", "optiver", None),
     ("https://www.ycombinator.com/companies/infer/jobs", "yc", "infer"),
     ("https://ycombinator.com/companies/infer/jobs/", "yc", "infer"),
 ]
@@ -44,6 +61,18 @@ def test_detect_from_url(url: str, ats: str, board: str | None) -> None:
         assert found.identity["site"] == "NVIDIAExternalCareerSite"
     if ats == "icims":
         assert "icims.com" in found.identity["portal"]
+    if ats == "amazon":
+        assert found.identity["host"] == "www.amazon.jobs"
+        assert found.identity["locale"] == "en"
+    if ats == "apple":
+        assert found.identity["host"] == "jobs.apple.com"
+        assert found.identity["locale"] == "en-us"
+    if ats == "google":
+        assert found.identity["host"] == "www.google.com"
+    if ats == "atlassian":
+        assert found.identity["host"] == "www.atlassian.com"
+    if ats == "optiver":
+        assert found.identity["host"] == "www.optiver.com"
 
 
 def test_detect_unknown_url() -> None:

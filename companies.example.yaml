@@ -1,6 +1,10 @@
 # Copy to companies.yaml (`jobwatch init`) and edit.
-# Sierra and Harvey stay on their Ashby boards. The next block is a verified
-# set of Greenhouse, Lever, Ashby, Workday, and SmartRecruiters boards.
+# Sierra and Harvey stay on their Ashby boards. The next block is verified
+# boards jobwatch can read: Greenhouse, Lever, Ashby, Workday, SmartRecruiters,
+# Eightfold, Rippling, Amazon, Apple, Google, LinkedIn, Atlassian, and Optiver.
+# Checked and left off, because the public page did not return a job list:
+# Meta, Uber, Shopify, HashiCorp, Tesla, Citadel, Two Sigma, Hudson River
+# Trading, and D. E. Shaw.
 # Every company after that block is from the YC US hiring directory:
 # https://www.ycombinator.com/companies?isHiring=true&regions=United%20States%20of%20America
 # Those entries use scope: all and max_age_days: 90. Recent software
@@ -34,6 +38,8 @@ defaults:
   - '2027'
   exclude_title:
   - senior
+  - sr
+  - snr
   - staff
   - principal
   - director
@@ -43,6 +49,11 @@ defaults:
   - vp
   - manager
   - lead
+  - l5
+  - l6
+  - l7
+  - l8
+  - l9
   include_description:
   - new grad
   - new graduate
@@ -84,7 +95,7 @@ companies:
   careers_url: https://www.harvey.ai/careers
   ats: ashby
   board: harvey
-# Verified Greenhouse, Lever, Ashby, Workday, and SmartRecruiters boards.
+# Verified boards. Companies with no readable public feed stay off this list.
 - id: openai
   name: OpenAI
   careers_url: https://jobs.ashbyhq.com/openai
@@ -1258,6 +1269,68 @@ companies:
   tenant: zoom
   site: Zoom
   locale: en-US
+- id: snap
+  name: Snap
+  careers_url: https://wd1.myworkdaysite.com/recruiting/snapchat/snap
+  ats: workday
+  host: wd1.myworkdaysite.com
+  tenant: snapchat
+  site: snap
+- id: microsoft
+  name: Microsoft
+  careers_url: https://apply.careers.microsoft.com/careers?domain=microsoft.com
+  ats: eightfold
+  host: apply.careers.microsoft.com
+  board: microsoft.com
+- id: netflix
+  name: Netflix
+  careers_url: https://explore.jobs.netflix.net/careers
+  ats: eightfold
+  host: explore.jobs.netflix.net
+  board: netflix.com
+- id: amazon
+  name: Amazon
+  careers_url: https://www.amazon.jobs/en/search
+  ats: amazon
+  host: www.amazon.jobs
+  locale: en
+- id: apple
+  name: Apple
+  careers_url: https://jobs.apple.com/en-us/search
+  ats: apple
+  host: jobs.apple.com
+  locale: en-us
+- id: google
+  name: Google
+  careers_url: https://www.google.com/about/careers/applications/jobs/results/
+  ats: google
+  host: www.google.com
+- id: linkedin
+  name: LinkedIn
+  careers_url: https://www.linkedin.com/jobs/search/?f_C=1337
+  ats: linkedin
+  host: www.linkedin.com
+  board: "1337"
+- id: atlassian
+  name: Atlassian
+  careers_url: https://www.atlassian.com/company/careers/all-jobs
+  ats: atlassian
+  host: www.atlassian.com
+- id: canva
+  name: Canva
+  careers_url: https://jobs.smartrecruiters.com/canva
+  ats: smartrecruiters
+  board: canva
+- id: snowflake
+  name: Snowflake
+  careers_url: https://jobs.ashbyhq.com/snowflake
+  ats: ashby
+  board: snowflake
+- id: optiver
+  name: Optiver
+  careers_url: https://www.optiver.com/join-us/jobs/
+  ats: optiver
+  host: www.optiver.com
 - id: 10x
   name: 10x
   careers_url: https://www.ycombinator.com/companies/10x/jobs
@@ -3507,11 +3580,9 @@ companies:
   max_age_days: 90
 - id: doordash
   name: DoorDash
-  careers_url: https://www.ycombinator.com/companies/doordash/jobs
-  ats: yc
-  board: doordash
-  scope: all
-  max_age_days: 90
+  careers_url: https://job-boards.greenhouse.io/doordashusa
+  ats: greenhouse
+  board: doordashusa
 - id: dots-2
   name: Dots 💸
   careers_url: https://www.ycombinator.com/companies/dots-2/jobs
@@ -7546,11 +7617,10 @@ companies:
   max_age_days: 90
 - id: rippling
   name: Rippling
-  careers_url: https://www.ycombinator.com/companies/rippling/jobs
-  ats: yc
+  careers_url: https://ats.rippling.com/rippling/jobs
+  ats: rippling
+  host: ats.rippling.com
   board: rippling
-  scope: all
-  max_age_days: 90
 - id: rivet
   name: Rivet
   careers_url: https://www.ycombinator.com/companies/rivet/jobs

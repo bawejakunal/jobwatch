@@ -138,6 +138,8 @@ defaults:
     - "2027"
   exclude_title:
     - senior
+    - sr
+    - snr
     - staff
     - principal
     - director
@@ -147,7 +149,12 @@ defaults:
     - "vp "
     - manager
     - " lead"
-  # Short tokens (lead, jr) are matched on word boundaries in code.
+    - l5
+    - l6
+    - l7
+    - l8
+    - l9
+  # Short tokens (lead, jr, sr, l5) are matched on word boundaries in code.
   check_description: true          # on by default; cached; --no-enrich to skip
   preferred_grad_year: 2027        # flagged and sorted first; 2026 is opt-in
   max_enrich: 80                   # detail-page fetches per company per run
@@ -576,7 +583,7 @@ Order:
    - Department is a software function and not a business function → software role.
    - Else, if `check_description` and the body matches `role_body_software` (phrases such as `software engineer`, not the bare word engineer) → software role.
    - Else drop.
-3. Seniority `exclude_title` (`senior`, `staff`, `principal`, `director`, `head of`, `architect`, `distinguished`, `vp`, `manager`, `lead`) drops a software role unless the title also has an early-career signal (`new grad`, `intern`, `university graduate`, …) or the preferred year. “Staff Software Engineer, University Graduate” stays. “Senior Software Engineer” goes. “Member of Technical Staff” is not treated as staff-level.
+3. Seniority `exclude_title` (`senior`, `sr`, `snr`, `staff`, `principal`, `director`, `head of`, `architect`, `distinguished`, `vp`, `manager`, `lead`, `l5`–`l9`) drops a software role unless the title also has an early-career signal (`new grad`, `intern`, `university graduate`, …) or the preferred year. “Staff Software Engineer, University Graduate” stays. “Senior Software Engineer” goes. “Member of Technical Staff” is not treated as staff-level.
 
 Years-of-experience text in the description does not drop a software role. The description is used to name an undecided function and to set the 2027 flag.
 
@@ -586,7 +593,7 @@ The four phrase lists default in code. Set `role_title_keep`, `role_title_drop`,
 
 `include_title` is no longer the keep gate. `exclude_title` is still the seniority list. A campus board keeps every posting with `scope: all`.
 
-Matching for seniority: case-insensitive; short tokens (`lead`, `jr`, `vp`) use word boundaries so “Leadership Development Program” is not excluded for `lead`.
+Matching for seniority: case-insensitive; short tokens (`lead`, `jr`, `sr`, `vp`, `l5`) use word boundaries so “Leadership Development Program” is not excluded for `lead`, “Sr.” is excluded, and “SRE” is not. Levels stop at `l9` because double-digit L-codes such as “L11” are server-integration levels, not seniority.
 
 ### Location filter (default US-only)
 

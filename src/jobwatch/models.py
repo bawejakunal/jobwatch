@@ -18,6 +18,14 @@ ATSName = Literal[
     "smartrecruiters",
     "icims",
     "yc",
+    "eightfold",
+    "rippling",
+    "amazon",
+    "apple",
+    "google",
+    "linkedin",
+    "atlassian",
+    "optiver",
     "browser",
 ]
 

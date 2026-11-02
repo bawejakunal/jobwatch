@@ -1,0 +1,25 @@
+{
+  "data": {
+    "count": 2,
+    "positions": [
+      {
+        "id": 1970393556922930,
+        "displayJobId": "1970393556922930",
+        "name": "Software Engineer: Security & Identity Intern Opportunities for University Students, Redmond",
+        "locations": ["Redmond, Washington, United States"],
+        "standardizedLocations": ["Redmond, WA, US"],
+        "positionUrl": "/careers/job/1970393556922930",
+        "postedTs": 1793516400,
+        "department": "Software Engineering"
+      },
+      {
+        "id": 1970393556922931,
+        "name": "Program Manager",
+        "locations": ["Multiple Locations"],
+        "positionUrl": "/careers/job/1970393556922931",
+        "postedTs": 1730500000,
+        "department": "Program Management"
+      }
+    ]
+  }
+}

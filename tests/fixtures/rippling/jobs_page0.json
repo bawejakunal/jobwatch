@@ -1,0 +1,22 @@
+{
+  "items": [
+    {
+      "id": "84d388b6-7656-434c-8862-0312eb6b97ac",
+      "name": "Business Operations Manager",
+      "url": "https://ats.rippling.com/rippling/jobs/84d388b6-7656-434c-8862-0312eb6b97ac",
+      "department": {"name": "Bizops"},
+      "locations": [
+        {
+          "name": "San Francisco, CA",
+          "country": "United States",
+          "countryCode": "US",
+          "workplaceType": "ON_SITE"
+        }
+      ]
+    }
+  ],
+  "page": 0,
+  "pageSize": 1,
+  "totalItems": 2,
+  "totalPages": 2
+}

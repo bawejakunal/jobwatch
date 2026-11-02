@@ -3,6 +3,13 @@ from __future__ import annotations
 from collections.abc import Callable
 
 from jobwatch.adapters import ADAPTERS, AdapterError, NeedsBrowserError, apply_identity, get_adapter
+from jobwatch.adapters.amazon import HITS_CAP as AMAZON_HITS_CAP
+from jobwatch.adapters.apple import DEFAULT_MAX_PAGES as APPLE_MAX_PAGES
+from jobwatch.adapters.eightfold import DEFAULT_MAX_PAGES as EIGHTFOLD_MAX_PAGES
+from jobwatch.adapters.google import DEFAULT_MAX_PAGES as GOOGLE_MAX_PAGES
+from jobwatch.adapters.linkedin import DEFAULT_MAX_PAGES as LINKEDIN_MAX_PAGES
+from jobwatch.adapters.optiver import DEFAULT_MAX_PAGES as OPTIVER_MAX_PAGES
+from jobwatch.adapters.rippling import DEFAULT_MAX_PAGES as RIPPLING_MAX_PAGES
 from jobwatch.detect import detect_from_url
 from jobwatch.filter import apply_filter, needs_description
 from jobwatch.http import RateLimiter, build_client
@@ -126,6 +133,49 @@ def _scan_one(
             extra = (
                 "Workday reported total=2000; results are capped. "
                 "Facet split is Phase 2 — see PLAN.md §5.4."
+            )
+            result.warning = f"{result.warning} {extra}".strip() if result.warning else extra
+        if company.extra.get("eightfold_truncated"):
+            extra = (
+                "Eightfold has more jobs than max_pages allows "
+                f"({company.max_pages or EIGHTFOLD_MAX_PAGES} pages of 10)."
+            )
+            result.warning = f"{result.warning} {extra}".strip() if result.warning else extra
+        if company.extra.get("rippling_truncated"):
+            extra = (
+                "Rippling has more pages than max_pages allows "
+                f"({company.max_pages or RIPPLING_MAX_PAGES} pages)."
+            )
+            result.warning = f"{result.warning} {extra}".strip() if result.warning else extra
+        if company.extra.get("amazon_truncated"):
+            hits = company.extra.get("amazon_hits")
+            if isinstance(hits, int) and hits >= AMAZON_HITS_CAP:
+                extra = f"Amazon reported hits={AMAZON_HITS_CAP}; results are capped."
+            else:
+                extra = "Amazon has more jobs than max_pages allows."
+            result.warning = f"{result.warning} {extra}".strip() if result.warning else extra
+        if company.extra.get("apple_truncated"):
+            extra = (
+                "Apple has more jobs than max_pages allows "
+                f"({company.max_pages or APPLE_MAX_PAGES} pages)."
+            )
+            result.warning = f"{result.warning} {extra}".strip() if result.warning else extra
+        if company.extra.get("google_truncated"):
+            extra = (
+                "Google has more jobs than max_pages allows "
+                f"({company.max_pages or GOOGLE_MAX_PAGES} pages)."
+            )
+            result.warning = f"{result.warning} {extra}".strip() if result.warning else extra
+        if company.extra.get("linkedin_truncated"):
+            extra = (
+                "LinkedIn has more jobs than max_pages allows "
+                f"({company.max_pages or LINKEDIN_MAX_PAGES} pages)."
+            )
+            result.warning = f"{result.warning} {extra}".strip() if result.warning else extra
+        if company.extra.get("optiver_truncated"):
+            extra = (
+                "Optiver has more jobs than max_pages allows "
+                f"({company.max_pages or OPTIVER_MAX_PAGES} pages)."
             )
             result.warning = f"{result.warning} {extra}".strip() if result.warning else extra
     except NeedsBrowserError as exc:

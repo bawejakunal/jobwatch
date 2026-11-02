@@ -210,6 +210,14 @@ def _identity_complete(detection: Detection) -> bool:
         return bool(ident.get("host") and ident.get("tenant") and ident.get("site"))
     if detection.ats == "icims":
         return bool(ident.get("portal"))
+    if detection.ats == "eightfold":
+        return bool(ident.get("host") and ident.get("board"))
+    if detection.ats == "rippling":
+        return bool(ident.get("board"))
+    if detection.ats == "linkedin":
+        return bool(ident.get("board"))
+    if detection.ats in {"amazon", "apple", "google", "atlassian", "optiver"}:
+        return bool(ident.get("host"))
     if detection.ats in {"greenhouse", "lever", "ashby", "smartrecruiters", "yc"}:
         return bool(ident.get("board"))
     return False
