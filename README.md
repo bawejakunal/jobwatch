@@ -52,7 +52,7 @@ jobwatch detect https://careers-fhcrc.icims.com/jobs/search?ss=1 --no-fetch
 
 1. Loads `companies.yaml` (cwd, `./.jobwatch/`, or `~/.config/jobwatch/`).
 2. For each enabled company, hits the matching adapter.
-3. Keeps software-engineering roles. A title does not have to say new grad or 2027; those matches are still sorted first. The title is searched first (in-memory SQLite FTS5). Sales, marketing, recruiting, and similar titles are dropped. GTM, solutions, support, and forward-deployed engineers are kept. When the title names no function, the job text is searched for a software phrase such as "software engineer". Senior, staff, principal, director, manager, and lead titles are left out unless they also say new grad, intern, or 2027. Campus boards can set `scope: all` to keep every posting. YC companies use `scope: all` with the software search still on, plus `max_age_days: 90`. Default location filter is **US-only** (any US office, US remote, or unspecified Remote). `--any-location` turns it off.
+3. Keeps software-engineering roles. A title does not have to say new grad or 2027; those matches are still sorted first. The title is searched first (in-memory SQLite FTS5). Sales, marketing, recruiting, and similar titles are dropped. GTM, solutions, support, and forward-deployed engineers are kept. When the title names no function, the job text is searched for a software phrase such as "software engineer". Senior (including Sr. and Snr), staff, principal, director, manager, lead, and L5–L9 titles are left out unless they also say new grad, intern, or 2027. Campus boards can set `scope: all` to keep every posting. YC companies use `scope: all` with the software search still on, plus `max_age_days: 90`. Default location filter is **US-only** (any US office, US remote, or unspecified Remote). `--any-location` turns it off.
 4. Upserts SQLite (`first_seen`, `last_seen`, `closed_at`, cached `description`).
 5. Prints a table. **NEW** means first seen on this run. **2027** is flagged and sorted first. `--all` prints the full open set.
 
@@ -84,6 +84,14 @@ The shipped whitelist in `companies.example.yaml` is Sierra, Harvey, a verified 
 | SmartRecruiters | `GET api.smartrecruiters.com/v1/companies/{id}/postings` |
 | iCIMS | HTML ` /jobs/search?ss=1&in_iframe=1&pr=` — **no public JSON** |
 | YC | HTML `https://www.ycombinator.com/companies/{slug}/jobs` — Inertia `data-page` JSON. Keeps `createdAt` within `max_age_days` (90 on the shipped list). |
+| Eightfold | `GET {host}/api/pcsx/search` (Microsoft). A 403 falls back to `GET {host}/api/apply/v2/jobs` (Netflix). Page size 10. |
+| Rippling | `GET ats.rippling.com/api/v2/board/{board}/jobs?page=N` |
+| Amazon | `GET www.amazon.jobs/{locale}/search.json` — `result_limit` 100. Warns when `hits` is 10000. |
+| Apple | `GET /api/v1/CSRFToken`, then `POST /api/v1/search` with the session cookie and the site's date `format` block. Page size 20. |
+| Google | HTML `www.google.com/about/careers/applications/jobs/results/?page=N`. Jobs are in the `AF_initDataCallback` `ds:1` payload, 20 per page. |
+| LinkedIn | HTML guest search `jobs-guest/jobs/api/seeMoreJobPostings/search?f_C={company id}`. Page size 10. |
+| Atlassian | HTML `www.atlassian.com/company/careers/all-jobs`. The iCIMS portals redirect there; the page embeds the job list. |
+| Optiver | `GET www.optiver.com/en/api/v1/jobs?from=N`. Page size 16. |
 
 `jobwatch add <url>` recognizes all of the above from the hosted URL (and from embeds on a custom domain). A YC jobs URL is stored with `scope: all` and `max_age_days: 90`. YC listings are still limited to software-engineering roles. A YC job page is fetched only when the title does not decide the role.
 
@@ -96,6 +104,10 @@ Classic portals usually work with a desktop Chrome UA. Many tenants return **403
 ### Workday limits
 
 `limit` must be 20. `total` is only trusted on page 0. Offsets past 2,000 wrap. jobwatch stops on repeats and warns when `total == 2000`. Tenant may live in the hostname (`nvidia.wd5.myworkdayjobs.com`) or the path (`wd1.myworkdaysite.com/recruiting/...`).
+
+Amazon warns when `hits` is 10000, which is the largest offset the search endpoint will return. Eightfold, Rippling, Apple, Google, LinkedIn, and Optiver warn when `max_pages` stops the scan before the feed's own total.
+
+These companies were checked and left off the whitelist because the public page did not return a job list: Meta, Uber, Shopify, HashiCorp, Tesla, Citadel, Two Sigma, Hudson River Trading, and D. E. Shaw. A 403 or an empty SmartRecruiters id is not stored as a board.
 
 ## Scheduler
 

@@ -1,0 +1,24 @@
+{
+  "res": {
+    "totalRecords": 2,
+    "searchResults": [
+      {
+        "id": "PIPE-114438210",
+        "positionId": "114438210",
+        "postingTitle": "Technical Specialist",
+        "transformedPostingTitle": "technical-specialist",
+        "postDateInGMT": "2026-11-02T00:41:36.350Z",
+        "jobSummary": "Offer technical support in Apple Retail.",
+        "team": {"teamName": "Apple Retail"},
+        "locations": [
+          {
+            "city": "Cupertino",
+            "stateProvince": "California",
+            "countryName": "United States",
+            "name": "United States"
+          }
+        ]
+      }
+    ]
+  }
+}

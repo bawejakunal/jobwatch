@@ -1,0 +1,21 @@
+{
+  "items": [
+    {
+      "id": "11111111-2222-3333-4444-555555555555",
+      "name": "Software Engineer",
+      "url": "https://ats.rippling.com/rippling/jobs/11111111-2222-3333-4444-555555555555",
+      "department": {"name": "Engineering"},
+      "locations": [
+        {
+          "name": "New York, NY",
+          "countryCode": "US",
+          "workplaceType": "HYBRID"
+        }
+      ]
+    }
+  ],
+  "page": 1,
+  "pageSize": 1,
+  "totalItems": 2,
+  "totalPages": 2
+}

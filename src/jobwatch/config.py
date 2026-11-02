@@ -62,6 +62,8 @@ DEFAULT_DESCRIPTION_INCLUDE = [
 
 DEFAULT_EXCLUDE = [
     "senior",
+    "sr",
+    "snr",
     "staff",
     "principal",
     "director",
@@ -71,6 +73,11 @@ DEFAULT_EXCLUDE = [
     "vp",
     "manager",
     "lead",
+    "l5",
+    "l6",
+    "l7",
+    "l8",
+    "l9",
 ]
 
 PACKAGE_ROOT = Path(__file__).resolve().parents[2]

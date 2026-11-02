@@ -60,6 +60,27 @@ def test_strong_include_beats_seniority(filter_settings: FilterSettings) -> None
     assert is_new_grad(_job(intern), c, filter_settings)
 
 
+def test_seniority_abbreviations_and_levels(filter_settings: FilterSettings) -> None:
+    c = company()
+    dropped = [
+        "Sr. Site Reliability Engineer-Federal, Security Clearance",
+        "Sr Software Engineer",
+        "Snr. Backend Engineer",
+        "Software Engineer (L5)",
+        "L6 Software Engineer, Infrastructure",
+    ]
+    for title in dropped:
+        assert not is_new_grad(_job(title), c, filter_settings), title
+    kept = [
+        "SRE, Infrastructure",
+        "Software Engineer L4",
+        "L11 System Product Development Engineer",
+        "Sr. Software Engineer, New Grad",
+    ]
+    for title in kept:
+        assert is_new_grad(_job(title), c, filter_settings), title
+
+
 def test_lead_word_boundary(filter_settings: FilterSettings) -> None:
     c = company()
     assert is_new_grad(_job("Software Engineer, Technical Leadership"), c, filter_settings)

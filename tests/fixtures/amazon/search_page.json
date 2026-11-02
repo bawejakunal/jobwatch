@@ -1,0 +1,24 @@
+{
+  "hits": 2,
+  "error": null,
+  "jobs": [
+    {
+      "id": "9e9f29ff-ba22-46ab-b27d-6583136198d7",
+      "id_icims": "10535680",
+      "title": "Data Center IT Support Engineer",
+      "job_path": "/en/jobs/10535680/data-center-it-support-engineer",
+      "posted_date": "September 10, 2026",
+      "team": "AWS Infrastructure",
+      "description": "<p>Work in a large data center.</p>",
+      "basic_qualifications": "<ul><li>1+ years of networking</li></ul>",
+      "preferred_qualifications": "<p>Bachelor's degree</p>",
+      "locations": [
+        {
+          "normalizedLocation": "Tempe, Arizona, USA",
+          "countryIso2a": "US",
+          "type": "ONSITE"
+        }
+      ]
+    }
+  ]
+}
