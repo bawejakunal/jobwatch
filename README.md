@@ -107,7 +107,7 @@ Classic portals usually work with a desktop Chrome UA. Many tenants return **403
 
 Amazon warns when `hits` is 10000, which is the largest offset the search endpoint will return. Eightfold, Rippling, Apple, Google, LinkedIn, and Optiver warn when `max_pages` stops the scan before the feed's own total.
 
-These companies were checked and left off the whitelist because the public page did not return a job list: Meta, Uber, Shopify, HashiCorp, Tesla, Citadel, Two Sigma, Hudson River Trading, and D. E. Shaw. A 403 or an empty SmartRecruiters id is not stored as a board.
+These companies were checked and left off the whitelist because the public page did not return a job list: Meta, Uber, Shopify, HashiCorp, Tesla, Citadel, Two Sigma, Hudson River Trading, and D. E. Shaw. `jobwatch scan` and `jobwatch list` print that disclaimer on every run. A 403 or an empty SmartRecruiters id is not stored as a board.
 
 ## Scheduler
 
