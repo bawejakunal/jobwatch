@@ -71,7 +71,7 @@ Failed companies are isolated: one 403 does not abort the scan (exit code 1 if a
 
 SQLite: `--db` / `JOBWATCH_DB`, else `./jobwatch.sqlite` next to a local yaml, else `$JOBWATCH_HOME/jobwatch.sqlite`.
 
-Default whitelist is Sierra and Harvey (both Ashby). Per-ATS samples are in `companies.ats-examples.yaml`.
+The shipped whitelist in `companies.example.yaml` is Sierra, Harvey, a verified set of boards, and the YC US hiring directory.
 
 ## Adapters
 

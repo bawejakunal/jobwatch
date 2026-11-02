@@ -10,9 +10,6 @@
 # about three months are dropped. Phrase lists default in code; replace
 # one with role_title_keep, role_title_drop, role_title_software, or
 # role_body_software. `jobwatch sync-yc` refreshes that block.
-#
-# Per-ATS samples (Greenhouse, Lever, Workday, SmartRecruiters, iCIMS) live in
-# companies.ats-examples.yaml — useful for adapter tests, not the default whitelist.
 
 defaults:
   include_title:

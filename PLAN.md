@@ -163,8 +163,7 @@ defaults:
   max_pages: null          # adapter-specific cap; Workday default 100 (2k jobs)
 
 companies:
-  # Default whitelist is Sierra + Harvey (both Ashby). Other ATS samples:
-  # companies.ats-examples.yaml
+  # Default whitelist starts with Sierra and Harvey (both Ashby).
   - id: sierra
     name: Sierra
     careers_url: https://sierra.ai/careers
@@ -177,7 +176,7 @@ companies:
     ats: ashby
     board: harvey
 
-  # --- Greenhouse (see companies.ats-examples.yaml) ---
+  # --- Greenhouse ---
   - id: discord
     name: Discord
     careers_url: https://job-boards.greenhouse.io/discord
