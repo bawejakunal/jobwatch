@@ -28,6 +28,7 @@ from jobwatch.output import (
     console,
     err_console,
     print_company_progress,
+    print_unscanned_disclaimer,
     render_table,
     rows_from_results,
     write_csv,
@@ -243,6 +244,7 @@ def list_cmd(
         )
     console.print(table)
     console.print(f"[dim]{cfg.path} · ATS adapters: {', '.join(known_ats())}[/dim]")
+    print_unscanned_disclaimer()
 
 
 @app.command()
@@ -310,6 +312,7 @@ def scan(
     if not quiet:
         render_table(rows, title=title)
         err_console.print(f"[dim]state: {db_path}[/dim]")
+    print_unscanned_disclaimer()
 
     if as_json:
         console.print(write_json(None, rows))

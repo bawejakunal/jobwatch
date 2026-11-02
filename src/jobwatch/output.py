@@ -19,6 +19,34 @@ def _location_cell(job: NormalizedJob) -> str:
 console = Console()
 err_console = Console(stderr=True)
 
+# Public career pages that do not expose a job list jobwatch can read.
+UNSCANNED_COMPANIES: tuple[str, ...] = (
+    "Meta",
+    "Uber",
+    "Shopify",
+    "HashiCorp",
+    "Tesla",
+    "Citadel",
+    "Two Sigma",
+    "Hudson River Trading",
+    "D. E. Shaw",
+)
+
+
+def unscanned_disclaimer() -> str:
+    names = ", ".join(UNSCANNED_COMPANIES[:-1])
+    last = UNSCANNED_COMPANIES[-1]
+    return (
+        "Disclaimer: jobwatch cannot scan "
+        f"{names}, and {last}. "
+        "Their career pages do not publish a job list jobwatch can read, "
+        "so those companies are absent from this run."
+    )
+
+
+def print_unscanned_disclaimer() -> None:
+    err_console.print(f"[yellow]{unscanned_disclaimer()}[/yellow]")
+
 
 def render_table(rows: list[tuple[NormalizedJob, bool]], *, title: str) -> None:
     table = Table(title=title, show_lines=False, expand=True)
